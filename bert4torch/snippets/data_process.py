@@ -54,7 +54,94 @@ def truncate_sequences(sequences:Iterable[List[int]], maxlen:int, indices:Union[
             return sequences
 
 
-def text_segmentate(text:str, maxlen:int, seps:str='\n', strips:str=None, truncate:bool=True, greed:bool=False):
+def _text_segmentate_nogreed(text:str, maxlen:int, seps:str='\n', strips:str=None):
+    """将文本按照标点符号划分为若干个短句（非贪婪模式）
+    1. 按照seps从前往后的优先级切分，尽量以高优先级优先切分，比如优先以'。？！'进行切分，再以'，、'切分
+    2. 如果某个短句没有sep, 则强制以maxlen结尾
+    3. 显示出的效果可能是切分的相对完整（以高优先级sep切分）
+
+    :param text: 待划分的句子
+    :param maxlen: int, 截断长度
+    :param seps: 分隔符
+    :param strips: ''.strip()
+
+    :return: List[str], 划分后的句子列表
+    """ 
+    # 参数校验
+    if maxlen <= 0:
+        raise ValueError("maxlen must be positive")
+    text = text.strip(strips)
+    if not text:
+        return []
+    elif len(text) <= maxlen:
+        return [text]
+    elif seps:
+        sep, rest_seps = seps[0], seps[1:]
+        pieces = text.split(sep)  # 按照最优先级的sep截断
+        text, results = '', []
+        for i, p in enumerate(pieces):
+            if text and p and len(text) + len(p) + len(sep) > maxlen:  # text+当前piece后超长了
+                results.extend(_text_segmentate_nogreed(text, maxlen, rest_seps, strips))
+                text = ''
+            if i + 1 == len(pieces):  # 最后一个片段
+                text = text + p
+            else:
+                text = text + p + sep  # 追加到当前text
+        if text:
+            results.extend(_text_segmentate_nogreed(text, maxlen, rest_seps, strips))
+        return results
+    else:
+        # 无分隔符，强制按 maxlen 切分
+        return [text[i:i+maxlen] for i in range(0, len(text), maxlen)]
+
+
+def _text_segmentate_greed(text:str, maxlen:int, seps:str='\n', strips:str=None):
+    """将文本按照标点符号划分为若干个短句（贪婪模式）
+    1. 尽可能保留小于maxlen的的以sep结尾的短句
+    2. 如果某个短句没有sep, 则强制以maxlen结尾
+    3. 显示出的效果可能是切分的比较碎（遇到任意一个sep就允许切分）
+       
+    :param text: 待划分的句子
+    :param maxlen: int, 截断长度
+    :param seps: 分隔符
+    :param strips: ''.strip()
+    :return: List[str], 划分后的句子列表
+    """
+    # 参数校验
+    if maxlen <= 0:
+        raise ValueError("maxlen must be positive")
+    text = text.strip(strips)
+    if not text:
+        return []
+    elif len(text) <= maxlen:
+        return [text]
+    
+    texts = []
+    chunk = ''
+    for char in text:
+        if char in seps:
+            new_part = chunk + char
+            # 遇到分隔符，且加到最后一句中还能满足maxlen要求，则添加到最后一句，否则新建一句
+            if texts and len(texts[-1]) + len(chunk) + len(char) <= maxlen:
+                texts[-1] += new_part
+            else:
+                texts.append(new_part)
+            chunk = ''
+        else:
+            # 没有遇到分隔符，且chunk长度小于maxlen，则添加到chunk中，否则截断
+            if len(chunk) < maxlen:
+                chunk += char
+            else:
+                texts.append(chunk[:maxlen])
+                chunk = chunk[maxlen:] + char
+    if chunk:
+        texts.append(chunk)
+
+    texts = [t.strip(strips) for t in texts if t.strip(strips)]
+    return texts
+
+
+def text_segmentate(text:str, maxlen:int, seps:str='\n', strips:str=None, greed:bool=False):
     """将文本按照标点符号划分为若干个短句
        
     :param text: 待划分的句子
@@ -70,93 +157,17 @@ def text_segmentate(text:str, maxlen:int, seps:str='\n', strips:str=None, trunca
     ### Example
     ```python
     from bert4torch.snippets import text_segmentate
-    from pprint import pprint
     seps, strips = u'\n。！？!?；;，, ', u'；;，, '
-    text = '''
-    你好，大家好！我叫小明，是一名刚刚踏出大学校门，满怀憧憬与热情的新晋毕业生。在过去的几年里，我在XX大学深造，专业聚焦于XX领域，这段学习经历不仅为我打下了坚实的理论基础，也让我在实践中积累了宝贵的经验。
-    在校期间，我积极参与各类学术科研活动，曾参与XX项目的研究，这段经历锻炼了我的问题解决能力和团队合作精神。同时，我还担任了学生会的XX职位，负责组织策划了多场校园活动，这些经历极大地提升了我的组织协调能力和领导力，也让我学会了如何在压力下保持高效工作。
-    除了专业学习和社会实践，我还热衷于XX技能/爱好，比如编程、摄影或是公共演讲，这不仅丰富了我的大学生活，也让我在兴趣中找到了自我成长的另一种可能。
-    现在，我带着对未知世界的好奇和对职业发展的渴望，站在了人生的新起点上。我期望能够将所学应用到实际工作中，为团队带来创新思维和活力，同时也期待在新的工作环境中不断学习，实现个人价值与公司目标的双赢。
-    最后，非常感谢有这个机会向大家介绍自己，我期待着与大家一起成长，共同面对挑战，创造美好的未来。谢谢大家！
-    '''
-    maxlen = 50
-    res = text_segmentate(text, maxlen, seps, strips, greed=False)
-    pprint(res)
-
-    # 输出
-    # ['你好，大家好！我叫小明，是一名刚刚踏出大学校门，满怀憧憬与热情的新晋毕业生。',
-    # '在过去的几年里，我在XX大学深造，专业聚焦于XX领域，这段学习经历不仅为我打下了坚实的理论基础',
-    # '也让我在实践中积累了宝贵的经验。',
-    # '在校期间，我积极参与各类学术科研活动，曾参与XX项目的研究',
-    # '这段经历锻炼了我的问题解决能力和团队合作精神。',
-    # '同时，我还担任了学生会的XX职位，负责组织策划了多场校园活动',
-    # '这些经历极大地提升了我的组织协调能力和领导力，也让我学会了如何在压力下保持高效工作。',
-    # '除了专业学习和社会实践，我还热衷于XX技能/爱好，比如编程、摄影或是公共演讲',
-    # '这不仅丰富了我的大学生活，也让我在兴趣中找到了自我成长的另一种可能。',
-    # '现在，我带着对未知世界的好奇和对职业发展的渴望，站在了人生的新起点上。',
-    # '我期望能够将所学应用到实际工作中，为团队带来创新思维和活力，同时也期待在新的工作环境中不断学习',
-    # '实现个人价值与公司目标的双赢。',
-    # '最后，非常感谢有这个机会向大家介绍自己，我期待着与大家一起成长，共同面对挑战，创造美好的未来。',
-    # '谢谢大家！']
-
-    res = text_segmentate(text, maxlen, seps, strips, greed=True)
-    pprint(res)
-
-    # 输出
-    # ['你好，大家好！我叫小明，是一名刚刚踏出大学校门，满怀憧憬与热情的新晋毕业生。在过去的几年里',
-    # '我在XX大学深造，专业聚焦于XX领域，这段学习经历不仅为我打下了坚实的理论基础',
-    # '也让我在实践中积累了宝贵的经验。\n在校期间，我积极参与各类学术科研活动，曾参与XX项目的研究',
-    # '这段经历锻炼了我的问题解决能力和团队合作精神。同时，我还担任了学生会的XX职位',
-    # '负责组织策划了多场校园活动，这些经历极大地提升了我的组织协调能力和领导力',
-    # '也让我学会了如何在压力下保持高效工作。\n除了专业学习和社会实践，我还热衷于XX技能/爱好',
-    # '比如编程、摄影或是公共演讲，这不仅丰富了我的大学生活，也让我在兴趣中找到了自我成长的另一种可能。\n',
-    # '现在，我带着对未知世界的好奇和对职业发展的渴望，站在了人生的新起点上。',
-    # '我期望能够将所学应用到实际工作中，为团队带来创新思维和活力，同时也期待在新的工作环境中不断学习',
-    # '实现个人价值与公司目标的双赢。\n最后，非常感谢有这个机会向大家介绍自己，我期待着与大家一起成长',
-    # '共同面对挑战，创造美好的未来。谢谢大家！']
+    text = '''你好，大家好！我叫小明，是一名刚刚踏出大学校门，满怀憧憬与热情的新晋毕业生。'
+    maxlen = 10
+    res = text_segmentate(text, maxlen, seps, strips, greed=False)  # 非贪婪模式
+    res = text_segmentate(text, maxlen, seps, strips, greed=True)  # 贪婪模式
     ```
-    """
-    text = text.strip().strip(strips)
+    """   
     if not greed:
-        if seps and len(text) > maxlen:
-            pieces = text.split(seps[0])  # 按照最优先级的sep截断
-            text, texts = '', []
-            for i, p in enumerate(pieces):
-                if text and p and len(text) + len(p) > maxlen - 1:  # text+当前piece后超长了
-                    texts.extend(text_segmentate(text, maxlen, seps[1:], strips, truncate))
-                    text = ''
-                if i + 1 == len(pieces):  # 最后一个片段
-                    text = text + p
-                else:
-                    text = text + p + seps[0]  # 追加到当前text
-            if text:
-                texts.extend(text_segmentate(text, maxlen, seps[1:], strips, truncate))
-            return texts
-        elif truncate and (not seps) and (len(text) > maxlen):
-            # 标点符号用完，仍然超长，且设置了truncate=True
-            return [text[i*maxlen:(i+1)*maxlen] for i in range(0, int(np.ceil(len(text)/maxlen)))]
-        else:
-            return [text]
+        return _text_segmentate_nogreed(text=text, maxlen=maxlen, seps=seps, strips=strips)
     else:
-        texts = ['']
-        chunk = ''
-        for char in text:
-            if char in seps:
-                if len(texts[-1]) + len(chunk) < maxlen:
-                    texts[-1] += chunk + char
-                    chunk = ''
-                else:
-                    texts.append(chunk + char)
-                    chunk = ''
-            else:
-                if len(chunk) < maxlen:
-                    chunk += char
-                else:
-                    texts.append(chunk[:maxlen])
-                    chunk = chunk[maxlen:] + char
-        texts = [text.strip(strips) for text in texts]
-        return texts
-
+        return _text_segmentate_greed(text=text, maxlen=maxlen, seps=seps, strips=strips)
 
 def merge_segmentate(sequences:List[str], maxlen:int, sep:str=''):
     '''把m个句子合并成不超过maxlen的n个句子, 主要用途是合并碎句子
