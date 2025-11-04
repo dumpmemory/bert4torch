@@ -27,8 +27,6 @@ class DeepSeek(Decoder):
                 and layer_idx % self.moe_layer_freq == 0:
                 layer.feedForward = DeepseekMoeFeedForward(**kwargs)
 
-        # self.LayerNormFinal.register_parameter('bias', None)
-
     def variable_mapping(self):
         # 映射到权重格式
         mapping = {

@@ -2,6 +2,7 @@ from bert4torch.models.bert import BERT
 import torch
 from bert4torch.snippets import delete_arguments
 from bert4torch.layers import LayerNorm, BlockIdentity
+from bert4torch.snippets import safe_register_parameter
 try:
     from transformers.modeling_attn_mask_utils import _prepare_4d_attention_mask
 except:
@@ -23,8 +24,7 @@ class ModernBert(BERT):
                                         weight=kwargs.get('weight', True), 
                                         bias=kwargs.get('bias', True))
         self.encoderLayer[0].attnLayerNorm = BlockIdentity(return_args_index=set([0]))
-        self.mlmDense.register_parameter('bias', None)
-        self.mlmLayerNorm.register_parameter('bias', None)
+        safe_register_parameter([self.mlmDense, self.mlmLayerNorm], 'bias', None)
 
     def _update_attention_mask(self, attention_mask: torch.Tensor) -> torch.Tensor:
         global_attention_mask = _prepare_4d_attention_mask(attention_mask, self.dtype)

@@ -906,5 +906,6 @@ VLM_MAPPING = {
     'qwen2_vl': Qwen2VL,
     'mllama': Mllama,
     'glm4v': GLM4V,
-    'internvl2_5': InternVL
+    'internvl2_5': InternVL,
+    'paddleocr_vl': Mllama
 }

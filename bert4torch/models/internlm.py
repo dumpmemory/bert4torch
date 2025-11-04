@@ -1,5 +1,6 @@
 from bert4torch.models.transformer import Decoder
 from bert4torch.layers import LlamaFeedForward
+from bert4torch.snippets  import safe_register_parameter
 import torch
 
 
@@ -21,9 +22,8 @@ class InternLM(Decoder):
         kwargs.pop('bias')
         for layer in self.decoderLayer:
             layer.feedForward = LlamaFeedForward(self.hidden_size, **kwargs)
-            layer.attnLayerNorm.register_parameter('bias', None)
-            layer.ffnLayerNorm.register_parameter('bias', None)
-        self.LayerNormFinal.register_parameter('bias', None)
+            safe_register_parameter([layer.attnLayerNorm, layer.ffnLayerNorm], 'bias', None)
+        safe_register_parameter(self.LayerNormFinal, 'bias', None)
 
     def variable_mapping(self):
         # 映射到权重格式
@@ -54,8 +54,13 @@ class InternLM(Decoder):
 
 
 class InternLM2(Decoder):
-    def __init__(self, *args, p_bias='rotary', **kwargs):
-        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': False, 'norm_mode': 'rmsnorm', 
+    def __init__(self, 
+        *args, 
+        p_bias='rotary', 
+        bias=False,
+        **kwargs
+    ):
+        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': bias, 'norm_mode': 'rmsnorm', 
                        'is_decoder': True, 'final_layernorm': True, 'pre_layernorm': True,
                        'mlp_type': 'LlamaFeedForward'})
         super().__init__(*args, **kwargs)

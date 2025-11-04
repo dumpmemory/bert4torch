@@ -5,7 +5,7 @@
 import torch
 from torch import nn
 from torch4keras.snippets import log_info, log_warn, log_error, TimeitContextManager
-from typing import Union, Optional
+from typing import Union, Optional, List
 import re
 from packaging import version
 from io import BytesIO
@@ -146,6 +146,26 @@ def has_meta_param(model:nn.Module, verbose:bool=False):
         return True
     return False
 
+
+def safe_register_parameter(
+        module_or_list:Union[nn.Module, List[nn.ModuleList]], 
+        name:str, 
+        param:Optional[torch.nn.Parameter]
+    ):
+    '''安全地注册参数，当param为None时，跳过注册'''
+    if isinstance(module_or_list, nn.Module):
+        module_or_list = [module_or_list]
+
+    for module in module_or_list:
+        try:
+            module: nn.Module
+            module.register_parameter(name, param)
+        except KeyError as e:
+            if ''.join(e.args) == f"attribute '{name}' already exists":
+                pass
+            else:
+                # 重新抛出其他 KeyError
+                raise
 
 if version.parse(torch.__version__) >= version.parse("1.10.0"):
     inference_mode = torch.inference_mode

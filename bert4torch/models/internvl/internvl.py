@@ -59,13 +59,13 @@ class InternVL(PreTrainedModelForDecoder):
             x = x.permute(0, 2, 1, 3).contiguous()
         return x
     
-    def get_vllm_embedding(
+    def get_visual_embedding(
             self, 
             input_ids: torch.LongTensor = None,
             pixel_values: Optional[torch.Tensor] = None,
             **kwargs
         ):
-        '''获取vlm的embedding
+        '''获取visual的embedding
         1. train阶段：input_ids为query的token_ids, pixel_values或pixel_values_videos有一个不为空
         2. infer阶段：
             use_states=True:
@@ -113,7 +113,7 @@ class InternVL(PreTrainedModelForDecoder):
         '''
         inputs = self.args_segmentate(inputs, **model_kwargs)
         input_ids, _, _, _, _, _, model_kwargs = self.language_model.preprare_embeddings_inputs(*inputs, **model_kwargs)
-        inputs_embeds = self.get_vllm_embedding(input_ids=input_ids, **model_kwargs)
+        inputs_embeds = self.get_visual_embedding(input_ids=input_ids, **model_kwargs)
         return self.language_model(input_ids=inputs_embeds, **model_kwargs)
     
     def variable_mapping(self):

@@ -46,7 +46,7 @@ class MiniCPMV(PreTrainedModelForDecoder):
         self.vlm_tgt_sizes = True if 'tgt_sizes' in inspect.signature(SiglipVisionTransformer.forward).parameters else False
         return model
 
-    def get_vllm_embedding(self, input_ids, **model_kwargs):
+    def get_visual_embedding(self, input_ids, **model_kwargs):
 
         if self.llm.embeddings.emb_scale != 1:
             vllm_embedding = self.llm.embeddings.word_embeddings(input_ids) * self.llm.embeddings.emb_scale
@@ -145,7 +145,7 @@ class MiniCPMV(PreTrainedModelForDecoder):
 
     def forward(self, *inputs:Union[tuple, list], **model_kwargs):
         inputs = self.args_segmentate(inputs, **model_kwargs)
-        vllm_embedding = self.get_vllm_embedding(inputs[0], **model_kwargs)
+        vllm_embedding = self.get_visual_embedding(inputs[0], **model_kwargs)
         return self.llm(input_ids=vllm_embedding, **model_kwargs)
     
     def load_variable(self, variable, ckpt_key, model_key):

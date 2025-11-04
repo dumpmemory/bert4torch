@@ -1,5 +1,6 @@
 from bert4torch.models.transformer import Decoder
 from bert4torch.layers.core import Qwen3MoeSparseFeedForward
+from bert4torch.snippets import safe_register_parameter
 import torch
 import re
 
@@ -10,8 +11,13 @@ class Qwen2(Decoder):
     2) 除了qkv有bias, 其余均没有bias
     3) 和InternLM基本一致, 唯一的差别是InternLM的multiHeadAttention.o有bias
     '''
-    def __init__(self, *args, p_bias='rotary', **kwargs):
-        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': True, 'norm_mode': 'rmsnorm', 
+    def __init__(self, 
+        *args, 
+        p_bias='rotary', 
+        bias=True,
+        **kwargs
+    ):
+        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': bias, 'norm_mode': 'rmsnorm', 
                        'is_decoder': True, 'final_layernorm': True, 'pre_layernorm': True,
                        'mlp_type': 'LlamaFeedForward'})
         super().__init__(*args, **kwargs)
@@ -20,13 +26,16 @@ class Qwen2(Decoder):
 
         # 修改网络结构
         for layer in self.decoderLayer:
-            layer.feedForward.intermediateDense.register_parameter('bias', None)
-            layer.feedForward.outputDense.register_parameter('bias', None)
-            layer.feedForward.intermediateDense2.register_parameter('bias', None)
-            layer.attnLayerNorm.register_parameter('bias', None)
-            layer.ffnLayerNorm.register_parameter('bias', None)
-            layer.multiHeadAttention.o.register_parameter('bias', None)
-        self.LayerNormFinal.register_parameter('bias', None)
+            safe_register_parameter([
+                layer.feedForward.intermediateDense,
+                layer.feedForward.outputDense,
+                layer.feedForward.intermediateDense2,
+                layer.attnLayerNorm,
+                layer.ffnLayerNorm,
+                layer.multiHeadAttention.o],
+                'bias', None
+            )
+        safe_register_parameter(self.LayerNormFinal, 'bias', None)
 
     def variable_mapping(self):
         # 映射到权重格式

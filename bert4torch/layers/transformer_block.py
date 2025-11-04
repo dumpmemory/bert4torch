@@ -4,6 +4,7 @@ import math
 import torch.nn.functional as F
 from bert4torch.layers.core import LayerNorm, MLP_MAP, T5PositionWiseFeedForward
 from bert4torch.layers.attention import ATTENTION_MAP, GatedAttention, TransformerxlMultiHeadAttn
+from bert4torch.snippets import safe_register_parameter
 from typing import Union, Optional, Tuple
 
 
@@ -266,11 +267,13 @@ class Glm2Layer(BertLayer):
     '''顺序：LN --> Att --> Add --> LN --> FFN --> Add'''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.attnLayerNorm.register_parameter('bias', None)
-        # self.ffnLayerNorm.register_parameter('bias', None)
-        self.multiHeadAttention.o.register_parameter('bias', None)
-        self.feedForward.intermediateDense.register_parameter('bias', None)
-        self.feedForward.outputDense.register_parameter('bias', None)
+        safe_register_parameter([
+            self.attnLayerNorm,
+            self.multiHeadAttention.o,
+            self.feedForward.intermediateDense,
+            self.feedForward.outputDense],
+            'bias', None
+        )
 
 
 class Gpt2MlLayer(BertLayer):

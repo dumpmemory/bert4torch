@@ -8,6 +8,7 @@ from bert4torch.models.deberta import DebertaV2
 from bert4torch.models.electra import ELECTRA
 from bert4torch.models.ernie import Ernie
 from bert4torch.models.ernied4_5 import Ernied4_5
+from bert4torch.models.paddleocr_vl import PaddleOCR_VL
 from bert4torch.models.gau_alpha import GAU_alpha
 from bert4torch.models.modernbert import ModernBert
 from bert4torch.models.glm import GLM, GLM2
@@ -145,6 +146,7 @@ def build_transformer_model(
         'electra': ELECTRA,
         'ernie': Ernie,
         'ernie4_5': Ernied4_5,
+        'paddleocr_vl': PaddleOCR_VL,
         'deberta_v2': DebertaV2,
         'modernbert': ModernBert,
         'uie': UIE,

@@ -1,0 +1,1 @@
+from .paddleocr_vl import PaddleOCR_VL
