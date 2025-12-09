@@ -455,10 +455,7 @@ class AutoRegressiveDecoder(object):
 
         # 达到长度直接输出
         self.flag = None
-        if self.return_states:
-            return results, states
-        else:
-            return results
+        return (results, states) if self.return_states else results
 
     def stream_beam_search(self, inputs: INPUT_TYPE, states:Optional[dict]=None, **generation_config):
         '''beam_search的stream输出模式'''

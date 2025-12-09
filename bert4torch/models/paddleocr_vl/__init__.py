@@ -1,1 +1,1 @@
-from .paddleocr_vl import PaddleOCR_VL
+from .modeling_paddleocr_vl import *

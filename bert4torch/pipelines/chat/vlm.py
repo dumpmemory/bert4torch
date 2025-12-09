@@ -14,9 +14,9 @@
 import torch
 from typing import Union, Optional, List, Tuple, Literal, Dict
 from .llm import ChatBase, ChatCli, ChatWebGradio, ChatWebStreamlit, ChatOpenaiApi
-from bert4torch.models.qwen2_vl import process_vision_info
-from bert4torch.models.qwen2_vl.vision_process import MIN_PIXELS, MAX_PIXELS
-from bert4torch.models.internvl.vision_process import fetch_image
+from bert4torch.models.qwen.qwen2_vl import process_vision_info
+from bert4torch.models.qwen.qwen2_vl.vision_process import MIN_PIXELS, MAX_PIXELS
+from bert4torch.models.intern.internvl.vision_process import fetch_image
 from bert4torch.snippets import (
     log_warn_once, 
     get_config_path, 

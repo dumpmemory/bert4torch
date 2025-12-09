@@ -6,7 +6,7 @@
 from bert4torch.pipelines import Chat
 from bert4torch.snippets.openai_client import OpenaiClient
 from bert4torch.models import build_transformer_model
-from bert4torch.models.qwen2_vl import process_vision_info
+from bert4torch.models.qwen import process_vision_info
 from transformers import AutoProcessor
 from PIL import Image
 import base64

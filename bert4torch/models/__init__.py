@@ -1,40 +1,35 @@
 from torch4keras.model import BaseModel, BaseModelDP, BaseModelDDP
 from torch4keras.trainer import Trainer
-from bert4torch.models.albert import ALBERT, ALBERT_Unshared
-from bert4torch.models.bart import BART
-from bert4torch.models.base import PreTrainedModel, extend_with_base_model, extend_with_language_model, extend_with_unified_language_model
-from bert4torch.models.bert import BERT
-from bert4torch.models.deberta import DebertaV2
-from bert4torch.models.electra import ELECTRA
-from bert4torch.models.ernie import Ernie
-from bert4torch.models.ernied4_5 import Ernied4_5
-from bert4torch.models.paddleocr_vl import PaddleOCR_VL
-from bert4torch.models.gau_alpha import GAU_alpha
-from bert4torch.models.modernbert import ModernBert
-from bert4torch.models.glm import GLM, GLM2
-from bert4torch.models.glm4v import GLM4V
-from bert4torch.models.gpt import GPT, GPT2, GPT2_ML
-from bert4torch.models.llama import LLaMA, Baichuan, MiniCPM
-from bert4torch.models.mllama import Mllama
-from bert4torch.models.minicpmv import MiniCPMV, MiniCPMLlama3V
-from bert4torch.models.nezha import NEZHA
-from bert4torch.models.roformer import RoFormer, RoFormerV2
-from bert4torch.models.t5 import T5, T5_Encoder, T5_Decoder
-from bert4torch.models.transformer import Transformer, Encoder, Decoder
-from bert4torch.models.transformer_xl import Transformer_XL
-from bert4torch.models.xlnet import XLNET
-from bert4torch.models.uie import UIE
-from bert4torch.models.bloom import Bloom
-from bert4torch.models.qwen import Qwen, Qwen2, Qwen3, Qwen3Moe
-from bert4torch.models.qwen2_vl import Qwen2VL
-from bert4torch.models.internlm import InternLM, InternLM2
-from bert4torch.models.internvl import InternVL
-from bert4torch.models.falcon import Falcon
-from bert4torch.models.deepseek import DeepSeek
+from .base import PreTrainedModel, Transformer, Encoder, Decoder, \
+    extend_with_base_model, extend_with_language_model, extend_with_unified_language_model
+from .albert import ALBERT, ALBERT_Unshared
+from .bart import BART
+from .bert import BERT
+from .deberta import DebertaV2
+from .electra import ELECTRA
+from .ernie import Ernie, Ernied4_5
+from .paddleocr_vl import PaddleOCR_VL
+from .gau_alpha import GAU_alpha
+from .modernbert import ModernBert
+from .glm import GLM, GLM2, GLM4V
+from .gpt import GPT, GPT2, GPT2_ML
+from .llama import LLaMA, Baichuan, Mllama
+from .minicpm import MiniCPM, MiniCPMV, MiniCPMLlama3V
+from .nezha import NEZHA
+from .roformer import RoFormer, RoFormerV2
+from .t5 import T5, T5_Encoder, T5_Decoder
+from .transformer_xl import Transformer_XL
+from .xlnet import XLNET
+from .uie import UIE
+from .bloom import Bloom
+from .qwen import Qwen, Qwen2, Qwen3, Qwen3Moe, Qwen2VL
+from .intern import InternLM, InternLM2, InternVL
+from .falcon import Falcon
+from .deepseek import DeepSeek
+from .modeling_utils import restore_default_torch_dtype, set_default_torch_dtype, get_device_map
 from typing import Union, Literal
 import json
 import os
-from bert4torch.models.modeling_utils import restore_default_torch_dtype, set_default_torch_dtype, get_device_map
 from bert4torch.snippets import (
     log_warn_once, 
     log_error,
