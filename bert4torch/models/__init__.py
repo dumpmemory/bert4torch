@@ -1,6 +1,6 @@
 from torch4keras.model import BaseModel, BaseModelDP, BaseModelDDP
 from torch4keras.trainer import Trainer
-from .base import PreTrainedModel, Transformer, Encoder, Decoder, \
+from .base import PreTrainedModel, BertBase, Transformer, Encoder, Decoder, \
     extend_with_base_model, extend_with_language_model, extend_with_unified_language_model
 from .albert import ALBERT, ALBERT_Unshared
 from .bart import BART
@@ -18,8 +18,7 @@ from .minicpm import MiniCPM, MiniCPMV, MiniCPMLlama3V
 from .nezha import NEZHA
 from .roformer import RoFormer, RoFormerV2
 from .t5 import T5, T5_Encoder, T5_Decoder
-from .transformer_xl import Transformer_XL
-from .xlnet import XLNET
+from .xlnet import Transformer_XL, XLNET
 from .uie import UIE
 from .bloom import Bloom
 from .qwen import Qwen, Qwen2, Qwen3, Qwen3Moe, Qwen2VL
@@ -52,7 +51,7 @@ def build_transformer_model(
         add_trainer: bool = False, 
         verbose: int = 1, 
         **kwargs
-        ) -> Union[PreTrainedModel, BERT, Transformer, Trainer]:
+        ) -> Union[PreTrainedModel, BertBase, Transformer, Trainer]:
     """根据配置文件构建模型, 可选加载checkpoint权重, 类似AutoModel.from_pretrained(...)
 
     :param config_path: str, 模型的config文件地址, 大部分模型都提供了bert4torch_config.json
@@ -130,8 +129,8 @@ def build_transformer_model(
     checkpoint_path = checkpoint_path or config.get('checkpoint_path')
 
     models = {
-        'bert': BERT,
-        'roberta': BERT,  
+        'bert': BertBase,
+        'roberta': BertBase,  
         'albert': ALBERT,
         'albert_unshared': ALBERT_Unshared,
         'nezha': NEZHA,

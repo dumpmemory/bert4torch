@@ -7,7 +7,6 @@
     Visit http://localhost:8000/docs for documents.
 3. web界面快速搭建demo(gradio+streamlit)
 
-# TODO: 设置return_states=True时候，受到build_prompt影响，很难保证prompt完全复现
 这里采用添加self.generation_config['states']['last_token']，是因为推理完成可能是因为到达max_length，未必是遇到了eos
 '''
 

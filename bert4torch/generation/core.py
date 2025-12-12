@@ -54,7 +54,7 @@ class AutoRegressiveDecoder(object):
     :param top_p: float, 这里的top_p是token的概率阈值设置(仅在头部top_p上进行概率采样)
     :param temperature: float, 温度参数, 默认为1, 越小结果越确定, 越大结果越多样
     :param repetition_penalty: float, 重复的惩罚系数, 越大结果越不重复
-    :param min_ends: int, 最小的end_id的个数
+    :param min_ends: int, 最小的eos_token_id的个数
     :param return_last_token: bool, 在stream_generate模式下, 是否仅输出last_token, 默认为False表示输出解码出来的历史token
         1) 理论上stream模式下, 应该只返回last_token, 但由于有的模型的tokenizer单个字符会被拆分, 只输出last_token会显示乱码
         2) 可以设置为True的情形: 一是tokenize对于字符不会拆分的情况(乱码); 二是tokenizer=None时, 返回的是last_token_id, 用户自行decode也可以
@@ -64,7 +64,7 @@ class AutoRegressiveDecoder(object):
     @inference_mode()
     def __init__(self, 
                  bos_token_id:int=None, 
-                 eos_token_id:int=-1, 
+                 eos_token_id:Union[int, float, tuple, list]=-1, 
                  max_new_tokens:int=None, 
                  min_new_tokens:int=1, 
                  max_length:int=64, 
@@ -102,11 +102,6 @@ class AutoRegressiveDecoder(object):
         self.min_ends = min_ends
         self.return_last_token = False
         self.return_states = False
-        
-        for old_key, new_key in {'start_id': 'bos_token_id', 'end_id': 'eos_token_id', 'topk': 'top_k', 
-                                 'topp': 'top_p', 'maxlen': 'max_length', 'pad_id': 'pad_token_id'}.items():
-            if old_key in generation_config:
-                raise DeprecationWarning(f'Args `{old_key}` not supported since 0.2.8, use {new_key} instead')
         self.set_generation_config(generation_config)
                 
         self.use_batch = False
@@ -259,8 +254,8 @@ class AutoRegressiveDecoder(object):
                 log_warn(f'Prompt len={input_seqlen} >= max_length={self.max_length}')
 
         if (states is not None) and (states.get('past_key_values') is not None):
-            past_key_values_lenghth = states.get('past_key_values')[0][0].shape[2]
-            max_new_tokens = max(0, max_new_tokens-past_key_values_lenghth)
+            past_key_values_length = states.get('past_key_values')[0][0].shape[2]
+            max_new_tokens = max(0, max_new_tokens-past_key_values_length)
         
         return range(max_new_tokens)
 
@@ -272,19 +267,20 @@ class AutoRegressiveDecoder(object):
             end_counts = (output_ids == self.eos_token_id).sum(1)  # 统计出现的end标记
         elif isinstance(self.eos_token_id, (set, tuple, list)):
             # self.eos_token_id: [2, 102, 68712]
-            end_counts = 0
-            is_end = None
+            end_counts = torch.zeros(output_ids.shape[0], dtype=torch.long, device=output_ids.device)
+            is_end = torch.zeros(output_ids.shape[0], dtype=torch.bool, device=output_ids.device)
             for eos_token_id in self.eos_token_id:
                 if isinstance(eos_token_id, (int, float)):  # self.eos_token_id: [2, 102, 68712]
-                    tmp = output_ids[:, -1] == eos_token_id
-                    is_end = tmp if is_end is None else is_end + tmp
+                    is_end += (output_ids[:, -1] == eos_token_id)
                     end_counts += (output_ids == eos_token_id).sum(1)
                 elif isinstance(eos_token_id, (set, tuple, list)):  # self.eos_token_id: [[2, 102], 68712]
                     tmp = torch.tensor([i[-len(eos_token_id):].tolist() == eos_token_id for i in output_ids], device=output_ids.device)
-                    is_end = tmp if is_end is None else is_end + tmp
-                    end_counts += torch.ones_like(is_end)  # TODO: 目前只有Qwen有这种操作
+                    is_end += tmp
+                    end_counts += tmp.long()
                 else:
                     raise TypeError(f'TypeError: eos_token_id={eos_token_id}')
+        else:
+            raise TypeError(f'Unsupported type for eos_token_id: {type(self.eos_token_id)}')
         return is_end, end_counts
 
     def __beam_search_step(self, step:int, inputs:TUPLE_LIST_TENSOR_TYPE, output_ids:torch.Tensor, output_scores:torch.Tensor, states: Optional[dict]=None):
@@ -394,14 +390,16 @@ class AutoRegressiveDecoder(object):
                 output_scores_new.append(output_score)
                 flag_new.append(flag)
 
-            inputs = [torch.cat(i) for i in zip(*inputs_new)]
-            output_ids = torch.cat(output_ids_new)
-            output_scores = torch.cat(output_scores_new)
-            self.top_k = topks_new
-            self.flag = torch.cat(flag_new)
-
-            if len(output_ids) == 0:
+            if len(inputs_new) > 0:  # 检查是否有未完成的序列
+                inputs = [torch.cat(i) for i in zip(*inputs_new)]
+                output_ids = torch.cat(output_ids_new)
+                output_scores = torch.cat(output_scores_new)
+                self.top_k = topks_new
+                self.flag = torch.cat(flag_new)
+            else:
+                # 所有序列都已完成
                 break_tag = True
+                output_ids = torch.empty(0, output_ids.shape[1], dtype=output_ids.dtype, device=output_ids.device)
         else:
             # 不满足结束条件, 需要对self.flag进行更新
             self.flag = torch.ones_like(self.flag, dtype=torch.bool)
@@ -546,7 +544,7 @@ class AutoRegressiveDecoder(object):
         :param top_p: float, 这里的top_p是token的概率阈值设置
         :param states: None/dict, 缓存参数
         :param temperature: 温度参数, 默认为1
-        :param min_ends: 最小的end_id的个数
+        :param min_ends: 最小的eos_token_id的个数
         :return: n个解码序列组成的list。
         """
         self.set_generation_config(generation_config)
@@ -556,7 +554,7 @@ class AutoRegressiveDecoder(object):
         results = []
 
         if self.use_batch:
-            smp_indexs = torch.tensor(range(btz)).to(output_ids)
+            smp_indexs = torch.tensor(range(btz)).to(output_ids.device)
             results = [None] * btz
 
         for step in self._define_stopping_criteria(states):
@@ -579,10 +577,7 @@ class AutoRegressiveDecoder(object):
                     results[smp_i] = ids
         # 返回结果
         self.flag = None
-        if self.return_states:
-            return results, states
-        else:
-            return results
+        return (results, states) if self.return_states else results
     
     def stream_random_sample(self, inputs_raw: INPUT_TYPE, states:Optional[dict]=None, **generation_config):
         """随机采样n个结果; stream输出"""
@@ -633,7 +628,7 @@ class SeqGeneration(AutoRegressiveDecoder):
     :param top_p: float, 这里的top_p是token的概率阈值设置
     :param temperature: 温度参数, 默认为1
     :param repetition_penalty: 重复的惩罚系数
-    :param min_ends: int, 最小的end_id的个数
+    :param min_ends: int, 最小的eos_token_id的个数
     :param include_input: int, 输出是否包含输入
     :param return_last_token: bool, 在stream_generate模式下, 是否仅输出last_token, 默认为False表示输出解码出来的历史token
         1) 理论上stream模式下, 应该只返回last_token, 但由于有的模型的tokenizer单个字符会被拆分, 只输出last_token会显示乱码
@@ -687,29 +682,34 @@ class SeqGeneration(AutoRegressiveDecoder):
     @staticmethod
     def _default_generation_config(tokenizer, model, **kwargs):
         # 可以直接以generation_config方式传参, 也可以top_p=0.9, top_k=50方式传参
-        if kwargs.get('generation_config'):
-            generation_config = kwargs.pop('generation_config')
-            kwargs.update(**generation_config)
+        kwargs.update(**kwargs.pop('generation_config', {}))
 
         ''' genration的默认参数设置 '''
-        if kwargs.get('pad_token_id') is not None:  # 用户自行设置
+        # pad_token_id
+        if kwargs.get('pad_token_id') is not None:
+            # 用户自行设置
             pass
-        elif (tokenizer is not None) and (tokenizer.pad_token_id is not None):
+        elif (tokenizer is not None) and getattr(tokenizer, 'pad_token_id', None) is not None:
+            # 使用tokenizer自己的pad_token_id
             kwargs['pad_token_id'] = tokenizer.pad_token_id
         else:
+            # 给默认值0
             kwargs['pad_token_id'] = 0
             log_info(f'Arg `pad_token_id` has been set to default value 0')
         
-        if kwargs.get('eos_token_id') is not None:  # 用户自行设置
+        # eos_token_id
+        if kwargs.get('eos_token_id') is not None:
+            # 用户自行设置则保留
             pass
-        elif (tokenizer is not None) and hasattr(tokenizer, 'eos_token_id') and (tokenizer.eos_token_id is not None):
+        elif (tokenizer is not None) and getattr(tokenizer, 'eos_token_id', None) is not None:
+            # 使用tokenizer自己的eos_token_id
             kwargs['eos_token_id'] = tokenizer.eos_token_id
             log_info(f'Arg `eos_token_id` has been set to tokenizer.eos_token_id:{tokenizer.eos_token_id}')
         else:
+            # 给默认值pad_token_id
             kwargs['eos_token_id'] = kwargs['pad_token_id']
             log_info(f'Arg `eos_token_id` has been set to `pad_token_id`:{kwargs["pad_token_id"]}')
         kwargs['device'] = kwargs.get('device') or next(model.parameters()).device
-
         return kwargs
 
     def _prepare_next_inputs(self, inputs:TUPLE_LIST_TENSOR_TYPE, output_ids:torch.Tensor, include_past:bool=True, **states):
@@ -774,19 +774,16 @@ class SeqGeneration(AutoRegressiveDecoder):
         '''        
         # 使用cache, 输入只能padding在左侧
         if self.use_states:
-            if states is None:
-                states = {'use_states': True}
-            elif states.get('use_states') is not True:
-                states.update({'use_states': True})
+            states = {**(states or {}), 'use_states': True}  # 确保states中的use_states为True
 
             if self.step == 0:
                 # next_inputs：step=0时候输入全部
                 next_inputs, states = self._prepare_next_inputs(inputs, output_ids, include_past=True, **states)
 
                 # position_ids: 在第0步如果padding在左侧, 则需要自定义position_ids
+                # tensor([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                #         [0, 0, 0, 0, 0, 1, 2, 3, 4, 5]])
                 if 'position_ids' not in states and self.use_batch and (self.padding_side == 'left'):
-                    # tensor([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-                    #         [0, 0, 0, 0, 0, 1, 2, 3, 4, 5]])
                     states['position_ids'] = create_position_ids_start_at_padding(next_inputs[0], self.pad_token_id, past_key_values_length=-1, start_padding_idx=False)
 
             elif self.step >= 1:
@@ -805,7 +802,7 @@ class SeqGeneration(AutoRegressiveDecoder):
 
                 # shape和size不一致: step=1时候, beam_search的btz=束宽, 或者要返回多个结果
                 if (self.mode == 'beam_search' or self.n > 1) and (self.step == 1):
-                    btz = len(self.flag)
+                    btz = len(self.flag) if getattr(self, 'flag', None) is not None else len(next_inputs[0])
                     if (states.get('past_key_values') is not None) and states['past_key_values'][0][0].shape[0] != btz:
                         repeat_size = btz // states['past_key_values'][0][0].shape[0]
                         for l_i, past_key_value in enumerate(states['past_key_values']):
@@ -822,11 +819,13 @@ class SeqGeneration(AutoRegressiveDecoder):
                         states['position_ids'] = states['position_ids'].repeat_interleave(repeat_size, dim=0)
 
                 # 已经有序列完成, 仅保留未完成序列(self.flag中True表示未完成序列)
-                if hasattr(self, 'flag') and (self.flag is not None) and (self.flag==0).sum().item() > 0:
-                    states['attention_mask'] = states['attention_mask'][self.flag]
-                    if (len(states['position_ids']) > 1):
+                if getattr(self, 'flag', None) is not None and (self.flag==0).sum().item() > 0:
+                    if states.get('attention_mask') is not None:
+                        states['attention_mask'] = states['attention_mask'][self.flag]
+                    if states.get('position_ids') is not None and (len(states['position_ids']) > 1):
                         states['position_ids'] = states['position_ids'][self.flag]
-                    states['past_key_values'] = [(kv[0][self.flag], kv[1][self.flag]) for kv in states['past_key_values']]
+                    if states.get('past_key_values') is not None:
+                        states['past_key_values'] = [(kv[0][self.flag], kv[1][self.flag]) for kv in states['past_key_values']]
                     if 'cross_past_key_values' in states:
                         states['cross_past_key_values'] = [(kv[0][self.flag], kv[1][self.flag]) for kv in states['cross_past_key_values']]
 
@@ -911,9 +910,11 @@ class SeqGeneration(AutoRegressiveDecoder):
             output_text = self.input_text + self.tokenizer.decode(output_ids[0].cpu().numpy(), **self.tokenizer_decode_config)
         
         if self.return_states:
-            select_states = {'past_key_values': states['past_key_values'], 
-                             'last_token_id': output_ids[0].cpu().numpy()[-1],
-                             'last_token': self.tokenizer.decode(output_ids[0].cpu().numpy()[-1])}
+            select_states = {
+                'past_key_values': states['past_key_values'], 
+                'last_token_id': output_ids[0].cpu().numpy()[-1],
+                'last_token': self.tokenizer.decode(output_ids[0].cpu().numpy()[-1])
+                }
             return output_text, select_states
         else:
             return output_text
@@ -996,4 +997,3 @@ class Seq2SeqGeneration(SeqGeneration):
         inputs = self._trans2tensors(inputs)
         encoder_output = self.encoder.predict(inputs)  # 在pre_process阶段直接过完encoder
         return encoder_output
-    

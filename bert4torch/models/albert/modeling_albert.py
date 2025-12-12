@@ -1,9 +1,9 @@
-from bert4torch.models.bert import BERT
+from bert4torch.models.base import BertBase
 from torch import nn
 import copy
 
 
-class ALBERT(BERT):
+class ALBERT(BertBase):
     def __init__(self, *args, **kwargs):
         super(ALBERT, self).__init__(*args, **kwargs)
         self.encoderLayer = nn.ModuleList([self.encoderLayer[0]])  # 取上述的第一行
@@ -98,7 +98,7 @@ class ALBERT_Unshared(ALBERT):
         """BERT的主体是基于Self-Attention的模块（和ALBERT区别是所有层权重独立）；这里就是调用BERT类的方法
         顺序:Att --> Add --> LN --> FFN --> Add --> LN
         """
-        return BERT.apply_main_layers(self, **model_kwargs)
+        return BertBase.apply_main_layers(self, **model_kwargs)
 
     def variable_mapping(self):
         mapping = super().variable_mapping()

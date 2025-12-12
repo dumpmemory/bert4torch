@@ -1,4 +1,4 @@
-from bert4torch.models.bert import BERT
+from bert4torch.models.base import BertBase
 import torch
 from bert4torch.snippets import delete_arguments
 from bert4torch.layers import LayerNorm, BlockIdentity
@@ -9,7 +9,7 @@ except:
     pass
 
 
-class ModernBert(BERT):
+class ModernBert(BertBase):
     @delete_arguments('with_pool', 'with_nsp')
     def __init__(self, *args, **kwargs):
         kwargs.update({'mlp_type': 'LlamaFeedForward', 'bias':False, 'p_bias': 'rotary',

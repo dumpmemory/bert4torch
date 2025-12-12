@@ -1,10 +1,10 @@
-from bert4torch.models.bert import BERT
+from bert4torch.models.base import BertBase
 from bert4torch.snippets import delete_arguments
 from torch import nn
 import torch
 
 
-class UIE(BERT):
+class UIE(BertBase):
     '''官方项目：https://github.com/universal-ie/UIE；
        参考项目：https://github.com/heiheiyoyo/uie_pytorch
     '''

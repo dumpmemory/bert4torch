@@ -1,10 +1,10 @@
-from bert4torch.models.bert import BERT
+from bert4torch.models.base import BertBase
 from bert4torch.layers import BertEmbeddings
 from torch import nn
 import torch
 
 
-class Ernie(BERT):
+class Ernie(BertBase):
     """百度文心 https://github.com/PaddlePaddle/ERNIE"""
     def __init__(self, *args, **kwargs):
         super(Ernie, self).__init__(*args, **kwargs)

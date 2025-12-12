@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from bert4torch.tokenizers import Tokenizer
-from bert4torch.models import build_transformer_model, BERT
+from bert4torch.models import build_transformer_model, BertBase
 
 
 config_path = 'E:/data/pretrain_ckpt/Tongjilibo/uie-base/bert4torch_config.json'
@@ -13,7 +13,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 tokenizer = Tokenizer(dict_path, do_lower_case=True)
 
 
-class UIE(BERT):
+class UIE(BertBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         hidden_size = self.hidden_size

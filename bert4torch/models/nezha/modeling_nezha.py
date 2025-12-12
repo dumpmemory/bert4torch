@@ -1,8 +1,8 @@
-from bert4torch.models.bert import BERT
+from bert4torch.models.base import BertBase
 from bert4torch.snippets import modify_variable_mapping
 
 
-class NEZHA(BERT):
+class NEZHA(BertBase):
     """华为推出的NAZHA模型；
     链接：https://arxiv.org/abs/1909.00204
     """

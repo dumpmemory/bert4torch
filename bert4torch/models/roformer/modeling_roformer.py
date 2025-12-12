@@ -1,10 +1,10 @@
-from bert4torch.models.bert import BERT
+from bert4torch.models.base import BertBase
 from bert4torch.snippets import delete_arguments
 import re
 from functools import partial
 
 
-class RoFormer(BERT):
+class RoFormer(BertBase):
     """旋转式位置编码的BERT模型；
     链接：https://kexue.fm/archives/8265
     """

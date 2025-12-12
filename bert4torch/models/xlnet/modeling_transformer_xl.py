@@ -1,13 +1,12 @@
-from bert4torch.models.bert import BERT
+from bert4torch.models.base import BertBase
 from bert4torch.snippets import insert_arguments, delete_arguments
 from bert4torch.layers import AdaptiveEmbedding, XlnetPositionsEncoding
 from bert4torch.layers import BlockIdentity, XlnetLayer
 from torch import nn
 import torch
-import copy
 
 
-class Transformer_XL(BERT):
+class Transformer_XL(BertBase):
     '''构建transformer-xl模型, 已加载；
     项目: https://github.com/kimiyoung/transformer-xl；
     不同点:  

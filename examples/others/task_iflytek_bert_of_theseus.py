@@ -5,7 +5,7 @@
 # 博客：https://kexue.fm/archives/7575
 
 import json
-from bert4torch.models import build_transformer_model, BaseModel, BERT
+from bert4torch.models import build_transformer_model, BaseModel, BertBase
 from bert4torch.snippets import sequence_padding, ListDataset
 from bert4torch.callbacks import Callback
 from bert4torch.tokenizers import Tokenizer
@@ -67,7 +67,7 @@ def collate_fn(batch):
 train_dataloader = DataLoader(MyDataset('F:/data/corpus/sentence_classification/CLUEdataset/iflytek/train.json'), batch_size=batch_size, shuffle=True, collate_fn=collate_fn) 
 valid_dataloader = DataLoader(MyDataset('F:/data/corpus/sentence_classification/CLUEdataset/iflytek/dev.json'), batch_size=batch_size, collate_fn=collate_fn) 
 
-class BERT_THESEUS(BERT):
+class BERT_THESEUS(BertBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         layer = BertLayer(self.hidden_size, self.num_attention_heads, self.dropout_rate, self.attention_probs_dropout_prob, self.intermediate_size, self.hidden_act, is_dropout=False, conditional_size=self.conditional_size)

@@ -7,7 +7,6 @@
     Visit http://localhost:8000/docs for documents.
 3. web界面快速搭建demo(gradio+streamlit)
 
-# TODO: 设置return_states=True时候，受到build_prompt影响，很难保证prompt完全复现
 这里采用添加self.generation_config['states']['last_token']，是因为推理完成可能是因为到达max_length，未必是遇到了eos
 '''
 
@@ -146,10 +145,6 @@ class ChatBase(PipeLineBase):
         self.template_config = self.config.get('template_config', dict())
         self.system = system
         self.kwargs = kwargs
-
-    def no_history_states(self) -> bool:
-        '''不使用history的states'''
-        return self.generation_config.get('states') is None
     
     def build_prompt(self, *args, **kwargs) -> str:
         raise NotImplementedError
@@ -856,15 +851,12 @@ class Glm(ChatBase):
             prompt = query
         else:
             prompt, turn_i = "", 0
-            if self.no_history_states():
-                for query_or_response in history:
-                    if query_or_response['role'] == 'user':
-                        prompt += f"[Round {turn_i}]\n问：{query_or_response['content']}\n"
-                    elif query_or_response['role'] == 'assistant':
-                        prompt += f"答：{query_or_response['content']}\n"
-                        turn_i += 1
-            else:
-                prompt += self.generation_config['states']['last_token']
+            for query_or_response in history:
+                if query_or_response['role'] == 'user':
+                    prompt += f"[Round {turn_i}]\n问：{query_or_response['content']}\n"
+                elif query_or_response['role'] == 'assistant':
+                    prompt += f"答：{query_or_response['content']}\n"
+                    turn_i += 1
 
             prompt += f"[Round {turn_i}]\n问：{query}\n答："
         history.append({'role': 'user', 'content': query})
@@ -895,15 +887,12 @@ class Glm2(ChatBase):
 
         # 这里和chatglm的区别是，chatglm的第一轮对话prompt=query, 不加[Round 1]这些前缀
         prompt, turn_i = "", 1
-        if self.no_history_states():
-            for query_or_response in history:
-                if query_or_response['role'] == 'user':
-                    prompt += f"[Round {turn_i}]\n\n问：{query_or_response['content']}\n\n"
-                elif query_or_response['role'] == 'assistant':
-                    prompt += f"答：{query_or_response['content']}\n"
-                    turn_i += 1
-        else:
-            prompt += self.generation_config['states']['last_token']
+        for query_or_response in history:
+            if query_or_response['role'] == 'user':
+                prompt += f"[Round {turn_i}]\n\n问：{query_or_response['content']}\n\n"
+            elif query_or_response['role'] == 'assistant':
+                prompt += f"答：{query_or_response['content']}\n"
+                turn_i += 1
 
         prompt += f"[Round {turn_i}]\n\n问：{query}\n\n答："
         history.append({'role': 'user', 'content': query})
@@ -967,11 +956,8 @@ class Glm3(ChatBase):
         if (functions is not None) and all(['tools' not in h for h in history]):
             history[0]['tools'] = functions
 
-        if self.no_history_states():
-            # 由于tokenizer封装了部分逻辑，这里直接转成input_ids
-            input_ids = self.tokenizer.build_chat_input(query, history=history, role="user")['input_ids']
-        else:
-            input_ids += self.generation_config['states']['last_token']
+        # 由于tokenizer封装了部分逻辑，这里直接转成input_ids
+        input_ids = self.tokenizer.build_chat_input(query, history=history, role="user")['input_ids']
         history = self.update_history(history, query)
         return input_ids
         
@@ -1052,10 +1038,7 @@ class Glm4(ChatBase):
 
         # 由于tokenizer封装了部分逻辑，这里直接转成input_ids
         history = self.update_history(history, query)
-        if self.no_history_states():
-            prompt = self.tokenizer.apply_chat_template(history, add_generation_prompt=True, tokenize=False)
-        else:
-            prompt += self.generation_config['states']['last_token']
+        prompt = self.tokenizer.apply_chat_template(history, add_generation_prompt=True, tokenize=False)
         return prompt
     
     def process_response_history(self, response:str, history:list):
@@ -1090,20 +1073,13 @@ class InternLM(ChatBase):
         # InternLM v1不支持function call
         if functions is not None: 
             log_warn('InternLM do not support function call')
-        if self.tokenizer.add_bos_token:
-            prompt = ""
-        else:
-            prompt = self.tokenizer.bos_token
-        
-        if self.no_history_states():
-            prompt += f"""<|System|>:{self.system}\n"""
-            for query_or_response in history:
-                if query_or_response['role'] == 'user':
-                    prompt += f"""<|User|>:{query_or_response['content']}\n"""
-                elif query_or_response['role'] == 'assistant':
-                    prompt += f"""<|Bot|>:{query_or_response['content']}<eoa>\n"""
-        else:
-            prompt += self.generation_config['states']['last_token']
+        prompt = "" if self.tokenizer.add_bos_token else self.tokenizer.bos_token
+        prompt += f"""<|System|>:{self.system}\n"""
+        for query_or_response in history:
+            if query_or_response['role'] == 'user':
+                prompt += f"""<|User|>:{query_or_response['content']}\n"""
+            elif query_or_response['role'] == 'assistant':
+                prompt += f"""<|Bot|>:{query_or_response['content']}<eoa>\n"""
 
         prompt += f"""<|User|>:{query}\n<|Bot|>:"""
         history = self.update_history(history, query)
@@ -1174,19 +1150,16 @@ class InternLM2(ChatBase):
             prompt = ""
         else:
             prompt = self.tokenizer.bos_token
-        if self.no_history_states():
-            for query_or_response in history:
-                role, content = query_or_response['role'], query_or_response['content']
-                if role == 'system':
-                    prompt += f"""<|im_start|>system\n{content}<|im_end|>\n"""
-                elif role == 'function':
-                    prompt += content
-                elif role == 'user':
-                    prompt += f"""<|im_start|>user\n{content}<|im_end|>\n"""
-                elif role == 'assistant':
-                    prompt += f"""<|im_start|>assistant\n{content}<|im_end|>\n"""
-        else:
-            prompt += self.generation_config['states']['last_token']
+        for query_or_response in history:
+            role, content = query_or_response['role'], query_or_response['content']
+            if role == 'system':
+                prompt += f"""<|im_start|>system\n{content}<|im_end|>\n"""
+            elif role == 'function':
+                prompt += content
+            elif role == 'user':
+                prompt += f"""<|im_start|>user\n{content}<|im_end|>\n"""
+            elif role == 'assistant':
+                prompt += f"""<|im_start|>assistant\n{content}<|im_end|>\n"""
 
         prompt += f"""<|im_start|>user\n{query}<|im_end|>\n<|im_start|>assistant\n"""
         history = self.update_history(history, query)
@@ -1362,23 +1335,19 @@ class Qwen(ChatBase):
         system_text = _tokenize_str("system", system)
         raw_text = ""
 
-        if self.no_history_states():
-            for turn_query, turn_response in reversed(history_list):
-                query_text = _tokenize_str("user", turn_query)
-                response_text = _tokenize_str("assistant", turn_response)
-                prev_chat = (
-                    f"\n{im_start}{query_text}{im_end}\n{im_start}{response_text}{im_end}"
-                )
+        for turn_query, turn_response in reversed(history_list):
+            query_text = _tokenize_str("user", turn_query)
+            response_text = _tokenize_str("assistant", turn_response)
+            prev_chat = (
+                f"\n{im_start}{query_text}{im_end}\n{im_start}{response_text}{im_end}"
+            )
 
-                current_context_size = len(self.tokenizer.encode(raw_text, allowed_special={im_start, im_end}))
-                if current_context_size < self.max_window_size:
-                    raw_text = prev_chat + raw_text
-                else:
-                    break
-            raw_text = f"{im_start}{system_text}{im_end}" + raw_text
-        else:
-            raw_text += self.generation_config['states']['last_token']
-
+            current_context_size = len(self.tokenizer.encode(raw_text, allowed_special={im_start, im_end}))
+            if current_context_size < self.max_window_size:
+                raw_text = prev_chat + raw_text
+            else:
+                break
+        raw_text = f"{im_start}{system_text}{im_end}" + raw_text
         raw_text += f"\n{im_start}user\n{instruction_query}{im_end}\n{im_start}assistant\n"
         history = self.update_history(history, query)
         return raw_text
@@ -1608,11 +1577,7 @@ class Qwen2(ChatBase):
             history[0]['tools'] = tool_system  # 仅用于是否已经添加过functions的判断
 
         history = self.update_history(history, query)
-        if self.no_history_states():
-            prompt = self.tokenizer.apply_chat_template(history, add_generation_prompt=True, tokenize=False)
-        else:
-            prompt += self.generation_config['states']['last_token']
-
+        prompt = self.tokenizer.apply_chat_template(history, add_generation_prompt=True, tokenize=False)
         return prompt
     
     def process_response_history(self, response:Union[str,tuple,list], history:List[dict]=None) -> str:
@@ -1720,17 +1685,14 @@ class LLaMA2(ChatBase):
             history.insert(0, {"role": "system", "content": system})
 
         texts = ''
-        if self.no_history_states():
-            for query_or_response in history:
-                role, content = query_or_response['role'], query_or_response['content'].strip()
-                if role == 'system':
-                    texts += f'[INST] <<SYS>>\n{content}\n<</SYS>>\n\n'
-                elif role == 'user':
-                    texts += f'{content} [/INST] '
-                elif role == 'assistant':
-                    texts += f"{content} </s><s> [INST] "
-        else:
-            texts = self.generation_config['states']['last_token']
+        for query_or_response in history:
+            role, content = query_or_response['role'], query_or_response['content'].strip()
+            if role == 'system':
+                texts += f'[INST] <<SYS>>\n{content}\n<</SYS>>\n\n'
+            elif role == 'user':
+                texts += f'{content} [/INST] '
+            elif role == 'assistant':
+                texts += f"{content} </s><s> [INST] "
 
         texts += f'{query.strip()} [/INST]'
         history = self.update_history(history, query)
@@ -1759,15 +1721,10 @@ class ApplyChatTemplate(ChatBase):
             history.insert(0, {"role": "system", "content": self.system})
 
         history = self.update_history(history, query)
-        if self.no_history_states():
-            # llama3.1支持function call
-            tools = functions
-            if (functions is not None) and (not isinstance(functions, list)):
-                tools = [functions]
-            texts = self.tokenizer.apply_chat_template(history, tools = tools, **self.apply_chat_template_config)
-        else:
-            texts = self.generation_config['states']['last_token']
-            texts += f'<|start_header_id|>user<|end_header_id|>\n\n{query}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n'
+        tools = functions
+        if (functions is not None) and (not isinstance(functions, list)):
+            tools = [functions]
+        texts = self.tokenizer.apply_chat_template(history, tools = tools, **self.apply_chat_template_config)
         return texts
     
     def process_response_history(self, response:Union[str,tuple,list], history:List[dict]=None) -> str:
@@ -1815,15 +1772,12 @@ class Ziya(ChatBase):
             log_warn('Ziya do not support function call')
 
         prompt = ''
-        if self.no_history_states():
-            for query_or_response in history:
-                role, content = query_or_response['role'], query_or_response['content']
-                if role == 'user':
-                    prompt += f"<human>:{content}\n"
-                elif role == 'assistant':
-                    prompt += f"<bot>:{content}\n"
-        else:
-            prompt += self.generation_config['states']['last_token']
+        for query_or_response in history:
+            role, content = query_or_response['role'], query_or_response['content']
+            if role == 'user':
+                prompt += f"<human>:{content}\n"
+            elif role == 'assistant':
+                prompt += f"<bot>:{content}\n"
         
         prompt += f"<human>:{query.strip()}\n<bot>:"
         history = self.update_history(history, query)
@@ -1847,19 +1801,15 @@ class ChineseLlamaAlpaca(ChatBase):
             history.insert(0, {"role": "system", "content": self.system})
 
         prompt = ''
-        if self.no_history_states():
-            for query_or_response in history:
-                role, content = query_or_response['role'], query_or_response['content']
-                if role == 'system':
-                    prompt = self.system + prompt
-                elif role == 'user':
-                    prompt += f"### Instruction:\n\n{content}\n\n"
-                elif role == 'assistant':
-                    prompt += f"### Response:\n\n{content}\n\n"
-            prompt += f"### Instruction:\n\n{query}\n\n### Response:\n\n"
-        else:
-            prompt += self.generation_config['states']['last_token'] + f"### Instruction:\n\n{query}\n\n### Response:\n\n"
-        
+        for query_or_response in history:
+            role, content = query_or_response['role'], query_or_response['content']
+            if role == 'system':
+                prompt = self.system + prompt
+            elif role == 'user':
+                prompt += f"### Instruction:\n\n{content}\n\n"
+            elif role == 'assistant':
+                prompt += f"### Response:\n\n{content}\n\n"
+        prompt += f"### Instruction:\n\n{query}\n\n### Response:\n\n"
         history = self.update_history(history, query)
         return prompt
 
@@ -1875,15 +1825,12 @@ class Belle(ChatBase):
             log_warn('Belle do not support function call')
 
         prompt = ''
-        if self.no_history_states():
-            for query_or_response in history:
-                role, content = query_or_response['role'], query_or_response['content']
-                if role == 'user':
-                    prompt += f"Human: {content} \n\n"
-                elif role == 'assistant':
-                    prompt += f"Assistant: {content}\n\n"
-        else:
-            prompt += self.generation_config['states']['last_token']
+        for query_or_response in history:
+            role, content = query_or_response['role'], query_or_response['content']
+            if role == 'user':
+                prompt += f"Human: {content} \n\n"
+            elif role == 'assistant':
+                prompt += f"Assistant: {content}\n\n"
         prompt += f"Human: {query} \n\nAssistant: "
         history = self.update_history(history, query)
         return prompt
@@ -1901,17 +1848,13 @@ class Baichuan(ChatBase):
             log_warn('Baichuan do not support function call')
 
         total_input = []
-        if self.no_history_states():
-            for query_or_response in history:
-                role, content = query_or_response['role'], query_or_response['content']
-                if role == 'user':
-                    total_input += [self.user_token_id] + self.tokenizer.encode(content)
-                elif role == 'assistant':
-                    total_input += [self.assistant_token_id] + self.tokenizer.encode(content) + [self.tokenizer.eos_token_id]
-        else:
-            total_input += [self.generation_config['states']['last_token_id']]
+        for query_or_response in history:
+            role, content = query_or_response['role'], query_or_response['content']
+            if role == 'user':
+                total_input += [self.user_token_id] + self.tokenizer.encode(content)
+            elif role == 'assistant':
+                total_input += [self.assistant_token_id] + self.tokenizer.encode(content) + [self.tokenizer.eos_token_id]
         total_input += [self.user_token_id] + self.tokenizer.encode(query) + [self.assistant_token_id]
-        
         history = self.update_history(history, query)
         return total_input
 
@@ -1927,18 +1870,14 @@ class PretrainedTextContinuation(ChatBase):
             log_warn('PretrainedTextContinuation do not support function call')
 
         total_input = ''
-        if self.no_history_states():
-            for query_or_response in history:
-                role, content = query_or_response['role'], query_or_response['content']
-                if self.generation_config.get('include_input', False):
-                    if role == 'assistant':
-                        total_input += content
-                else:
+        for query_or_response in history:
+            role, content = query_or_response['role'], query_or_response['content']
+            if self.generation_config.get('include_input', False):
+                if role == 'assistant':
                     total_input += content
-        else:
-            total_input += [self.generation_config['states']['last_token_id']]
+            else:
+                total_input += content
         total_input += query
-        
         history = self.update_history(history, query)
         return total_input
 
