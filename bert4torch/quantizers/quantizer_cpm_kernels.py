@@ -13,7 +13,8 @@ from typing import List, Union, Dict
 import re
 from tqdm import tqdm
 from functools import partial
-from bert4torch.snippets import is_package_available, has_meta_param
+from bert4torch.snippets import is_package_available
+from bert4torch.models.modeling_utils import has_meta_param
 from .base import QuantizerBase
 
 try:

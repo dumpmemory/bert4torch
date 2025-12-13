@@ -5,15 +5,14 @@ import torch
 class InternLM2(Decoder):
     def __init__(self, 
         *args, 
-        p_bias='rotary', 
+        pos_emb_type='rotary', 
         bias=False,
         **kwargs
     ):
-        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': bias, 'norm_mode': 'rmsnorm', 
-                       'is_decoder': True, 'final_layernorm': True, 'pre_layernorm': True,
+        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': bias, 'norm_mode': 'rmsnorm', 
+                       'final_layernorm': True, 'pre_layernorm': True,
                        'mlp_type': 'LlamaFeedForward'})
         super().__init__(*args, **kwargs)
-        self.model_type = 'internlm2'
         del self.embeddings.layerNorm
 
     def load_trans_ckpt(self, checkpoint):

@@ -5,6 +5,7 @@ from typing import List, Union, Dict
 import numpy as np
 import torch
 from bert4torch.snippets import get_pool_emb, PoolStrategy, log_warn
+from bert4torch.models.modeling_utils import inference_mode
 from tqdm.autonotebook import trange
 from .base import PipeLineBase
 
@@ -33,7 +34,7 @@ class Text2Vec(PipeLineBase):
         self.prompts = pooling.get('prompts', {})
         self.default_prompt_name = pooling.get('default_prompt_name')
         
-    @torch.inference_mode()
+    @inference_mode()
     def encode(
         self,
         # sentence_transformers的encode方法参数

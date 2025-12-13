@@ -5,7 +5,7 @@
 import torch
 from torch import nn
 from bert4torch.layers import LayerNorm
-from bert4torch.models.modeling_utils import load_state_dict_into_meta_model
+from bert4torch.models.modeling_utils import load_state_dict_into_meta_model, has_meta_param
 from bert4torch.snippets import (
     JsonConfig, 
     log_warn, 
@@ -19,8 +19,7 @@ from bert4torch.snippets import (
     log_warn,
     log_warn_once,
     is_accelerate_available,
-    DottableDict,
-    has_meta_param
+    DottableDict
 )
 from torch4keras.model import BaseModel, add_trainer
 import warnings

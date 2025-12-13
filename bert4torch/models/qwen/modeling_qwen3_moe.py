@@ -6,7 +6,6 @@ import re
 class Qwen3Moe(Qwen3):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.model_type = 'qwen3_moe'
         self.mlp_only_layers = kwargs.get('mlp_only_layers')
         self.num_experts = kwargs.get('num_experts')
         self.decoder_sparse_step = kwargs.get('decoder_sparse_step')

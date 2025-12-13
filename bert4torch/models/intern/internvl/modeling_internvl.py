@@ -2,7 +2,8 @@ from typing import List, Optional, Tuple, Union
 from bert4torch.models.qwen import Qwen2
 from bert4torch.models.llama import LLaMA
 from bert4torch.models.base import PreTrainedModelForDecoder
-from bert4torch.snippets import DottableDict, inference_mode, log_warn_once
+from bert4torch.snippets import DottableDict, log_warn_once
+from bert4torch.models.modeling_utils import inference_mode
 import torch
 from torch import nn
 

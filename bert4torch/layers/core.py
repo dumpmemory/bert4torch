@@ -12,14 +12,13 @@ from bert4torch.losses import AddAuxiliaryLoss
 
 
 class LayerNorm(nn.Module):
-    def __init__(self, hidden_size:int, eps:float=1e-12, conditional_size:Union[bool, int]=False, weight:bool=True, bias:bool=True, 
+    def __init__(self, hidden_size:int, eps:float=1e-12, conditional_size:Union[bool, int]=False, bias:bool=True, 
                  norm_mode:Literal['normal', 'torch_buildin', 'rmsnorm']='normal', rmsnorm_fp32:Literal['llama-qwen', 'glm']='llama-qwen', **kwargs):
         """ layernorm层，自行实现是为了兼容conditianal layernorm，使得可以做条件文本生成、条件分类等任务
 
             :param hidden_size: int, layernorm的神经元个数
             :param eps: float
             :param conditional_size: int, condition layernorm的神经元个数; 详情：https://spaces.ac.cn/archives/7124
-            :param weight: bool, 是否包含权重
             :param bias: bool, 是否包含偏置
             :param norm_mode: str, `normal`, `rmsnorm`, `torch_buildin`
             :param rmsnorm_fp32: str
@@ -32,15 +31,13 @@ class LayerNorm(nn.Module):
         self.rmsnorm_fp32 = rmsnorm_fp32
         self.eps = eps
         self.conditional_size = conditional_size
+
+        # RoFormerV2和GAU_alpha没有weight
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+
+        # 兼容t5不包含bias项, 大模型的RMSnorm
+        self.bias = nn.Parameter(torch.zeros(hidden_size)) if bias else None
         
-        # 兼容roformer_v2不包含weight
-        if weight:
-            self.weight = nn.Parameter(torch.ones(hidden_size))
-        # 兼容t5不包含bias项, 和t5使用的RMSnorm
-        if bias:
-            self.bias = nn.Parameter(torch.zeros(hidden_size))
-        else:
-            self.bias = None
         # 条件layernorm, 用于条件文本生成
         if conditional_size:
             # 这里采用全零初始化, 目的是在初始状态不干扰原来的预训练权重
@@ -54,36 +51,33 @@ class LayerNorm(nn.Module):
             cond = hidden_states[1] if self.conditional_size else None
             hidden_states = hidden_states[0]
 
-        # torch自带LayerNorm
         if self.norm_mode == 'torch_buildin':
+            # torch自带LayerNorm
             return F.layer_norm(hidden_states, self.normalized_shape, self.weight, self.bias, self.eps)
-        
-        # RMSnorm: t5、大模型系列均使用
         elif self.norm_mode == 'rmsnorm':
+            # RMSnorm: t5、大模型系列均使用
             hidden_states_fp32 = hidden_states.float()
             variance = hidden_states_fp32.pow(2).mean(-1, keepdim=True)
             if self.rmsnorm_fp32 == 'llama-qwen':
                 o = (hidden_states_fp32 * torch.rsqrt(variance + self.eps)).type_as(hidden_states)  # LLAMA, QWEN
             elif self.rmsnorm_fp32 == 'glm':  # glm
                 o = (hidden_states * torch.rsqrt(variance + self.eps))
-        
-        # 自行实现的LayerNorm
         else:
+            # 自行实现的LayerNorm
             u = hidden_states.mean(-1, keepdim=True)
             s = (hidden_states - u).pow(2).mean(-1, keepdim=True)
             o = (hidden_states - u) / torch.sqrt(s + self.eps)
 
         if not hasattr(self, 'weight'):
-            self.weight = 1
-
-        if self.conditional_size and (cond is not None):
+            output = o
+        elif self.conditional_size and (cond is not None):
             for _ in range(len(hidden_states.shape) - len(cond.shape)):
                 cond = cond.unsqueeze(dim=1)
             output = (self.weight + self.dense1(cond)) * o + self.dense2(cond)
         else:
             output = self.weight * o
 
-        if hasattr(self, 'bias') and (self.bias is not None):
+        if getattr(self, 'bias', None) is not None:
             output += self.bias
         return output if output.dtype == hidden_states.dtype else output.type_as(hidden_states)
 
@@ -102,9 +96,9 @@ class BertEmbeddings(nn.Module):
         self.word_embeddings = nn.Embedding(vocab_size, embedding_size, padding_idx=pad_token_id)
 
         # 位置编码
-        if kwargs.get('p_bias') == 'sinusoid':
+        if kwargs.get('pos_emb_type') == 'sinusoid':
             self.position_embeddings = SinusoidalPositionEncoding(max_position, embedding_size)
-        elif kwargs.get('p_bias') in {'rotary', 'typical_relative', 't5_relative', 'MultiHeadAttention', 'deberta_v2', 'alibi'}:
+        elif kwargs.get('pos_emb_type') in {'rotary', 'typical_relative', 't5_relative', 'MultiHeadAttention', 'deberta_v2', 'alibi'}:
             # 如果使用相对位置编码，则不声明PositionEmbeddings
             pass
         elif max_position > 0:

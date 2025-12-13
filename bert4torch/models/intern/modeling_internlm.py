@@ -1,6 +1,6 @@
 from bert4torch.models.base import Decoder
 from bert4torch.layers import LlamaFeedForward
-from bert4torch.snippets  import safe_register_parameter
+from bert4torch.models.modeling_utils  import safe_register_parameter
 
 
 class InternLM(Decoder):
@@ -9,12 +9,11 @@ class InternLM(Decoder):
     1) FeedForward和Llama一致, 三个dense层
     2) 除了qkvo有bias, 其余均没有bias
     '''
-    def __init__(self, *args, p_bias='rotary', **kwargs):
-        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': True, 'norm_mode': 'rmsnorm', 
-                       'is_decoder': True, 'final_layernorm': True, 'pre_layernorm': True,
+    def __init__(self, *args, pos_emb_type='rotary', **kwargs):
+        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': True, 'norm_mode': 'rmsnorm', 
+                       'final_layernorm': True, 'pre_layernorm': True,
                        'mlp_type': 'LlamaFeedForward'})
         super().__init__(*args, **kwargs)
-        self.model_type = 'internlm'
         del self.embeddings.layerNorm
 
         # 修改网络结构

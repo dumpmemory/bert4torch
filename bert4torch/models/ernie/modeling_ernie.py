@@ -10,7 +10,6 @@ class Ernie(BertBase):
         super(Ernie, self).__init__(*args, **kwargs)
         self.use_task_id = kwargs.get('use_task_id')
         self.embeddings = self.ErnieEmbeddings(**self.get_kw(*self._embedding_args, **kwargs))
-        self.model_type = 'ernie'
 
     def variable_mapping(self):
         mapping = super(Ernie, self).variable_mapping(prefix='ernie')

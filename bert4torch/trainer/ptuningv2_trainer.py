@@ -69,8 +69,6 @@ class PtuningV2Model(BaseModel):
         super().__init__(*args, **kwargs)
         # 建立模型，加载权重
         self.encoder = encoder
-        if hasattr(encoder, 'model_type'):
-            self.model_type = self.encoder.model_type
         self.config = self.encoder.config
         self.config.pre_seq_len = pre_seq_len
         self.config.prefix_projection = prefix_projection

@@ -14,7 +14,6 @@ class GLM2(GLM):
         kwargs.update({'layer_type': "Glm2Layer", 'norm_mode': 'rmsnorm', 'rmsnorm_fp32': 'glm', 'pre_layernorm': True})
         super().__init__(*args, **kwargs)
         self.LayerNormFinal = LayerNorm(self.hidden_size, eps=kwargs.get('layer_norm_eps', 1e-5), norm_mode='rmsnorm', bias=False)
-        self.model_type = 'glm2'
 
     def load_trans_ckpt(self, checkpoint, prefix=''):
         state_dict = super().load_trans_ckpt(checkpoint)

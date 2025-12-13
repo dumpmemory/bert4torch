@@ -14,9 +14,8 @@ class DebertaV2(BertBase):
     '''
     @delete_arguments('with_pool', 'with_nsp')
     def __init__(self, *args, **kwargs):
-        kwargs.update({'p_bias': 'deberta_v2'})  # 控制在Embedding阶段不生成position_embedding
+        kwargs.update({'pos_emb_type': 'deberta_v2'})  # 控制在Embedding阶段不生成position_embedding
         super(DebertaV2, self).__init__(*args, **kwargs)
-        self.model_type = 'deberta'
         # Encoder中transformer_block前的其他网络结构
         self.relative_attention = kwargs.get("relative_attention", True)
         self.conv = ConvLayer(**kwargs) if kwargs.get("conv_kernel_size", 0) > 0 else None

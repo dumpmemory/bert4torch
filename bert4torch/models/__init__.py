@@ -25,7 +25,7 @@ from .qwen import Qwen, Qwen2, Qwen3, Qwen3Moe, Qwen2VL
 from .intern import InternLM, InternLM2, InternVL
 from .falcon import Falcon
 from .deepseek import DeepSeek
-from .modeling_utils import restore_default_torch_dtype, set_default_torch_dtype, get_device_map
+from .modeling_utils import restore_default_torch_dtype, set_default_torch_dtype, get_device_map, has_meta_param
 from typing import Union, Literal
 import json
 import os
@@ -38,8 +38,7 @@ from bert4torch.snippets import (
     is_accelerate_available,
     get_checkpoint_path, 
     get_config_path,
-    DottableDict,
-    has_meta_param
+    DottableDict
 )
 
 @restore_default_torch_dtype
@@ -129,8 +128,8 @@ def build_transformer_model(
     checkpoint_path = checkpoint_path or config.get('checkpoint_path')
 
     models = {
-        'bert': BertBase,
-        'roberta': BertBase,  
+        'bert': BERT,
+        'roberta': BERT,  
         'albert': ALBERT,
         'albert_unshared': ALBERT_Unshared,
         'nezha': NEZHA,

@@ -18,8 +18,8 @@ class Transformer_XL(BertBase):
     @delete_arguments('with_pool', 'with_nsp', 'with_mlm')
     @insert_arguments(with_lm=False)
     def __init__(self, *args, mem_len=0, same_length=False, clamp_len=-1, **kwargs):
-        # p_bias来控制embedding阶段无pos_embedding
-        kwargs.update({'p_bias': 'MultiHeadAttention'})
+        # pos_emb_type来控制embedding阶段无pos_embedding
+        kwargs.update({'pos_emb_type': 'MultiHeadAttention'})
         self.attn_type = kwargs.pop('attn_type', 0)  # pop出来防止影响内部attn_type
         self.mem_len, self.same_length, self.clamp_len = mem_len, same_length, clamp_len
         super().__init__(*args, **kwargs)
@@ -50,7 +50,6 @@ class Transformer_XL(BertBase):
         # 映射
         if self.with_lm:
             self.lm_head = nn.Linear(self.hidden_size, self.vocab_size, bias=True)
-        self.model_type = 'transformer_xl'
 
     def init_mems(self, bsz):
         '''初始化mems, 用于记忆mlen的各层隐含层状态'''

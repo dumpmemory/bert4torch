@@ -7,10 +7,9 @@ class Bloom(Decoder):
     '''Bloom: https://arxiv.org/abs/2211.05100
     主要区别就是alibi编码，其他和bert结构一致
     '''
-    def __init__(self, *args, p_bias='alibi', **kwargs):
-        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': True, 'is_decoder': True, 'final_layernorm': True})
+    def __init__(self, *args, pos_emb_type='alibi', **kwargs):
+        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': True, 'final_layernorm': True})
         super().__init__(*args, **kwargs)
-        self.model_type = 'bloom'
 
     def load_trans_ckpt(self, checkpoint):
         '''原始权重中qkv是一个全连接, 需要拆分成q,k,v'''

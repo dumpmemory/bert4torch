@@ -496,8 +496,8 @@ class GatedAttention(nn.Module):
         self.offsetscale = self.OffsetScale(attention_key_size, heads=2, bias=bias)
         self.o_dense = nn.Linear(self.intermediate_size, hidden_size, bias=bias)
         
-        self.p_bias = kwargs.get('p_bias')
-        if self.p_bias == 'rotary':  # RoPE
+        self.pos_emb_type = kwargs.get('pos_emb_type')
+        if self.pos_emb_type == 'rotary':  # RoPE
             self.relative_positions_encoding = RopePositionEncoding(embedding_size=self.attention_head_size, **kwargs)
 
     def forward(self, hidden_states, attention_mask, position_ids):
@@ -507,7 +507,7 @@ class GatedAttention(nn.Module):
         q, k = self.offsetscale(qk)  # 仿射变换
 
         # 加入RoPE
-        if self.p_bias == 'rotary':
+        if self.pos_emb_type == 'rotary':
             q = self.relative_positions_encoding(q, position_ids)
             k = self.relative_positions_encoding(k, position_ids)
 
@@ -853,7 +853,7 @@ ATTENTION_MAP = {
     'MllamaTextCrossAttention': MllamaTextCrossAttention,
     'ModernBertAttention': ModernBertAttention,
 
-    # 下面是以p_bias为key
+    # 下面是以pos_emb_type为key
     'deberta_v2': DebertaV2Attention,
     'alibi': AlibiAttention,
     'typical_relative': NezhaTypicalRelativeAttention,

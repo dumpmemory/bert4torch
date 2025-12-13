@@ -13,13 +13,12 @@ class LLaMA(Decoder):
     3. feedForward不同, 三层全连接
     4. rotary相对位置编码
     '''
-    def __init__(self, *args, p_bias='rotary', **kwargs):
-        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': False, 'norm_mode': 'rmsnorm', 
-                       'is_decoder': True, 'final_layernorm': True, 'pre_layernorm': True, 
+    def __init__(self, *args, pos_emb_type='rotary', **kwargs):
+        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': False, 'norm_mode': 'rmsnorm', 
+                       'final_layernorm': True, 'pre_layernorm': True, 
                        'mlp_type': 'LlamaFeedForward'})
         super().__init__(*args, **kwargs)
         del self.embeddings.layerNorm
-        self.model_type = 'llama'
 
         # 修改lm_head，目前在Baichuan2中使用
         if kwargs.get('norm_head') is True:

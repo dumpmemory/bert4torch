@@ -7,12 +7,11 @@ class Qwen3(Qwen2):
     1) 没有bias, 和llama一致
     2) q和k有q_norm和k_norm
     '''
-    def __init__(self, *args, p_bias='rotary', **kwargs):
-        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': False, 'norm_mode': 'rmsnorm', 
-                       'is_decoder': True, 'final_layernorm': True, 'pre_layernorm': True,
+    def __init__(self, *args, pos_emb_type='rotary', **kwargs):
+        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': False, 'norm_mode': 'rmsnorm', 
+                       'final_layernorm': True, 'pre_layernorm': True,
                        'mlp_type': 'LlamaFeedForward', 'attn_type': 'Qwen3Attention'})
         Decoder.__init__(self, *args, **kwargs)
-        self.model_type = 'qwen3'
         del self.embeddings.layerNorm
     
     def variable_mapping(self):

@@ -2,12 +2,9 @@
 '''工具函数
 '''
 
-import torch
-from torch import nn
 from torch4keras.snippets import log_info, log_warn, log_error, TimeitContextManager
 from typing import Union, Optional, List
 import re
-from packaging import version
 from io import BytesIO
 import requests
 from PIL import Image
@@ -80,27 +77,6 @@ def modify_variable_mapping(original_func, **new_dict):
     return wrapper
 
 
-def get_weight_decay_optim_groups(module:nn.Module, weight_decay:float) -> dict:
-    '''获取weight_decay的参数列表'''
-    # start with all of the candidate parameters
-    param_dict = {pn: p for pn, p in module.named_parameters()}
-    # filter out those that do not require grad
-    param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
-    # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
-    # i.e. all weight tensors in matmuls + embeddings decay, all biases and layernorms don't.
-    decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
-    nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
-    optim_groups = [
-        {'params': decay_params, 'weight_decay': weight_decay},
-        {'params': nodecay_params, 'weight_decay': 0.0}
-    ]
-    num_decay_params = sum(p.numel() for p in decay_params)
-    num_nodecay_params = sum(p.numel() for p in nodecay_params)
-    log_info(f"num decayed parameter tensors: {len(decay_params)}, with {num_decay_params:,} parameters")
-    log_info(f"num non-decayed parameter tensors: {len(nodecay_params)}, with {num_nodecay_params:,} parameters")
-    return optim_groups
-
-
 def has_chinese_char(text:str) -> bool:
     '''判断一句话中是否包含中文'''
     if text is None:
@@ -134,40 +110,3 @@ def load_image(image: Union[Image.Image, np.ndarray, str]) -> Image.Image:
         raise ValueError(f"Unrecognized image input, support local path, http url, base64, np.ndarray and PIL.Image, got {image}")
     image = image_obj.convert("RGB")
     return image
-
-
-def has_meta_param(model:nn.Module, verbose:bool=False):
-    '''是否有meta的param'''
-    meta_names = [name_ for name_, para_ in model.named_parameters() if para_.device == torch.device('meta')]
-
-    if len(meta_names) > 0:
-        if verbose:
-            log_error(f'Meta device not allowed: {meta_names}')
-        return True
-    return False
-
-
-def safe_register_parameter(
-        module_or_list:Union[nn.Module, List[nn.ModuleList]], 
-        name:str, 
-        param:Optional[torch.nn.Parameter]
-    ):
-    '''安全地注册参数，当param为None时，跳过注册'''
-    if isinstance(module_or_list, nn.Module):
-        module_or_list = [module_or_list]
-
-    for module in module_or_list:
-        try:
-            module: nn.Module
-            module.register_parameter(name, param)
-        except KeyError as e:
-            if ''.join(e.args) == f"attribute '{name}' already exists":
-                pass
-            else:
-                # 重新抛出其他 KeyError
-                raise
-
-if version.parse(torch.__version__) >= version.parse("1.10.0"):
-    inference_mode = torch.inference_mode
-else:
-    inference_mode = torch.no_grad

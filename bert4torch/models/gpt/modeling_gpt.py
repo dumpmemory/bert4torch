@@ -12,7 +12,6 @@ class GPT(Decoder):
         kwargs['tie_word_embeddings'] = kwargs.get('tie_word_embeddings', True)
         super(GPT, self).__init__(*args, **kwargs)
         del self.embeddings.layerNorm
-        self.model_type = 'gpt'
 
     def load_trans_ckpt(self, checkpoint):
         state_dict = super().load_trans_ckpt(checkpoint)

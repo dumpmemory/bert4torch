@@ -7,7 +7,8 @@ import torch.nn as nn
 import numpy as np
 from bert4torch.generation.logits_process import *
 from bert4torch.snippets import take_along_dim, torch_div, sequence_padding, create_position_ids_start_at_padding, \
-    log_info, log_warn, log_warn_once, inference_mode
+    log_info, log_warn, log_warn_once
+from bert4torch.models.modeling_utils import inference_mode
 from bert4torch.tokenizers import TokenizerBase
 from torch4keras.model import BaseModel
 from torch4keras.trainer import Trainer

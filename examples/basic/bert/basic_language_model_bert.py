@@ -42,6 +42,7 @@ token_ids, segments_ids = tokenizer.encode(inputtext)
 
 tokens_ids_tensor = torch.tensor([token_ids]).to(device)
 segment_ids_tensor = torch.tensor([segments_ids]).to(device)
+maskpos = tokens_ids_tensor[0].tolist().index(103)
 
 # 需要传入参数with_mlm
 model.eval()

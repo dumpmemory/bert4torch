@@ -4,7 +4,7 @@ import math
 import torch.nn.functional as F
 from bert4torch.layers.core import LayerNorm, MLP_MAP, T5PositionWiseFeedForward
 from bert4torch.layers.attention import ATTENTION_MAP, GatedAttention, TransformerxlMultiHeadAttn
-from bert4torch.snippets import safe_register_parameter
+from bert4torch.models.modeling_utils import safe_register_parameter
 from typing import Union, Optional, Tuple
 
 
@@ -48,7 +48,7 @@ class BertLayer(nn.Module):
         self.apply_residual_post_layernorm = apply_residual_post_layernorm
         self.is_decoder = kwargs.get('is_decoder', False)
         self.add_cross_attention = kwargs.get('add_cross_attention', False)
-        self.attn_type = kwargs.get('attn_type',  kwargs.get('p_bias', 'MultiHeadAttention'))
+        self.attn_type = kwargs.get('attn_type',  kwargs.get('pos_emb_type', 'MultiHeadAttention'))
         self.mlp_type = kwargs.get('mlp_type', 'PositionWiseFeedForward')
         
         # self attention

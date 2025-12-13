@@ -18,7 +18,6 @@ class Encoder(BertBase):
         super().__init__(*args, **kwargs)
         # encoder需要返回encoder_attention_mask
         self.encoder_attention_mask = None
-        self.model_type = 'encoder'
     
     def forward(self, *inputs, **model_kwargs):
         """因为encoder需要返回encoder_attention_mask，因此这里从新定义一下，多返回一个参数
@@ -106,7 +105,6 @@ class Decoder(LM_Mask, BertBase, PreTrainedModelForDecoder):
         kwargs['is_decoder'] = True  # 标记是decoder
         super().__init__(*args, **kwargs)
         self.is_decoder = True
-        self.model_type = 'decoder'
         self.decoderLayer = self.encoderLayer
         del self.encoderLayer
         self.final_layernorm = final_layernorm
@@ -129,8 +127,7 @@ class Decoder(LM_Mask, BertBase, PreTrainedModelForDecoder):
         if self.final_layernorm:
             self.LayerNormFinal = LayerNorm(self.hidden_size, eps=kwargs.get('layer_norm_eps', 1e-12), 
                                             conditional_size=self.conditional_size, norm_mode=kwargs.get('norm_mode', 'normal'), 
-                                            rmsnorm_fp32=kwargs.get('rmsnorm_fp32', 'llama-qwen'),
-                                            weight=kwargs.get('weight', True), bias=kwargs.get('bias', True))
+                                            rmsnorm_fp32=kwargs.get('rmsnorm_fp32', 'llama-qwen'), bias=kwargs.get('bias', True))
 
     def tie_weights(self):
         # decoder底层的embedding和顶层的全连接共享
@@ -214,7 +211,6 @@ class Transformer(PreTrainedModelForDecoder):
         self.tie_word_embeddings_encoder_decoder = tie_word_embeddings_encoder_decoder
 
         self.is_encoder_decoder = True
-        self.model_type = 'transformer'
 
         # encoder
         self.encoder = Encoder(*args, **kwargs)

@@ -7,7 +7,7 @@ from torch.utils.checkpoint import checkpoint
 from .pretrained_model import PreTrainedModel
 from ..modeling_utils import old_checkpoint
 from bert4torch.layers import LayerNorm, BertEmbeddings, TRANSFORMER_BLOCKS, BlockIdentity
-from bert4torch.snippets import create_position_ids_start_at_padding, DottableDict, modify_variable_mapping
+from bert4torch.snippets import create_position_ids_start_at_padding, DottableDict
 from bert4torch.activations import get_activation
 from packaging import version
 from typing import Union, Literal, List
@@ -117,7 +117,6 @@ class BertBase(PreTrainedModel):
             self.mlmBias = nn.Parameter(torch.zeros(self.vocab_size))
             self.mlmDecoder.bias = self.mlmBias
             self.tie_weights()
-        self.model_type = 'bert'
 
     @property
     def _embedding_args(self):
@@ -388,28 +387,6 @@ class BertBase(PreTrainedModel):
                         outputs[name] = arg
                         break
             return outputs
-
-    def load_trans_ckpt(self, checkpoint):
-        """加载ckpt, 方便后续继承并做一些预处理
-        这么写的原因是下游很多模型从BERT继承，这样下游可以默认使用PreTrainedModel的load_trans_ckpt
-        """
-        state_dict = super().load_trans_ckpt(checkpoint)        
-        if hasattr(self, 'model_type') and (self.model_type == 'bert'):
-            # bert
-            mapping_reverse = {v:k for k, v in self.variable_mapping().items()}
-            mapping = {}
-            for key in state_dict.keys():
-                # bert-base-chinese中ln的weight和bias是gamma和beta
-                if ".gamma" in key:
-                    value = key.replace(".gamma", ".weight")
-                    mapping[mapping_reverse[value]] = key
-                if ".beta" in key:
-                    value = key.replace(".beta", ".bias")
-                    mapping[mapping_reverse[value]] = key
-            if ('cls.predictions.bias' in state_dict) and ('cls.predictions.decoder.bias' not in state_dict):
-                mapping['mlmDecoder.bias'] = 'cls.predictions.bias'
-            self.variable_mapping = modify_variable_mapping(self.variable_mapping, **mapping)
-        return state_dict
     
     def load_variable(self, variable, ckpt_key, model_key, prefix='bert'):
         """加载单个变量的函数, 这里的名称均为映射前的"""

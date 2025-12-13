@@ -13,12 +13,11 @@ class Falcon(Decoder):
     '''
     _no_split_modules = ["BertLayer", "FalconParallelAttnLayer"]
     def __init__(self, *args, **kwargs):
-        kwargs.update({'weight': True, 'pre_layernorm': True, 'norm_mode': 'torch_buildin', 
-                      'is_decoder': True, 'final_layernorm': True, 'attention_scale': False})
-        if kwargs.get('p_bias') == 'alibi':
+        kwargs.update({'pre_layernorm': True, 'norm_mode': 'torch_buildin', 
+                       'final_layernorm': True, 'attention_scale': False})
+        if kwargs.get('pos_emb_type') == 'alibi':
             AlibiAttention.apply_alibi_pos_emb = apply_alibi_pos_emb
         super().__init__(*args, **kwargs)
-        self.model_type = 'falcon'
         self.multi_query_attention = kwargs.get('num_key_value_heads') is not None
         del self.embeddings.layerNorm
 

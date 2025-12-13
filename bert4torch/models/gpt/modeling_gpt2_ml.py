@@ -14,7 +14,6 @@ class GPT2_ML(Decoder):
         kwargs['tie_word_embeddings'] = kwargs.get('tie_word_embeddings', True)
         kwargs['layer_type'] = "Gpt2MlLayer"
         super().__init__(*args, **kwargs)
-        self.model_type = 'gpt2_ml'
     
     def load_trans_ckpt(self, checkpoint):
         state_dict = super().load_trans_ckpt(checkpoint)

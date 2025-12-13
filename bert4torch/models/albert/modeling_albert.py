@@ -7,7 +7,6 @@ class ALBERT(BertBase):
     def __init__(self, *args, **kwargs):
         super(ALBERT, self).__init__(*args, **kwargs)
         self.encoderLayer = nn.ModuleList([self.encoderLayer[0]])  # 取上述的第一行
-        self.model_type = 'albert'
 
     def apply_main_layers(self, **model_kwargs):
         """BERT的主体是基于Self-Attention的模块（和BERT区别是始终使用self.encoderLayer[0]）；
@@ -92,7 +91,6 @@ class ALBERT_Unshared(ALBERT):
     def __init__(self, *args, **kwargs):
         super(ALBERT_Unshared, self).__init__(*args, **kwargs)
         self.encoderLayer = nn.ModuleList([copy.deepcopy(self.encoderLayer[0]) for _ in range(self.num_hidden_layers)])
-        self.model_type = 'albert_unshared'
         
     def apply_main_layers(self, **model_kwargs):
         """BERT的主体是基于Self-Attention的模块（和ALBERT区别是所有层权重独立）；这里就是调用BERT类的方法

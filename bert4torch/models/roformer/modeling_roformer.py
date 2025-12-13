@@ -1,4 +1,5 @@
 from bert4torch.models.base import BertBase
+from bert4torch.layers import LayerNorm
 from bert4torch.snippets import delete_arguments
 import re
 from functools import partial
@@ -9,9 +10,8 @@ class RoFormer(BertBase):
     链接：https://kexue.fm/archives/8265
     """
     def __init__(self, *args, **kwargs):
-        kwargs.update({'p_bias': 'rotary'})  # 指定在attention阶段使用rotary编码
+        kwargs.update({'pos_emb_type': 'rotary'})  # 指定在attention阶段使用rotary编码
         super(RoFormer, self).__init__(*args, **kwargs)
-        self.model_type = 'roformer'
         self.load_variable = partial(super().load_variable, prefix='roformer')
 
     def variable_mapping(self):
@@ -26,14 +26,19 @@ class RoFormerV2(RoFormer):
     """
     @delete_arguments('with_pool', 'with_nsp')
     def __init__(self, *args, **kwargs):
-        kwargs.update({'p_bias': 'rotary', 'weight': False, 'bias': False, 'norm_mode': 'rmsnorm'})
+        kwargs.update({'pos_emb_type': 'rotary', 'bias': False, 'norm_mode': 'rmsnorm'})
         super(RoFormerV2, self).__init__(*args, **kwargs)
+
+        # LayerNorm没有weight
+        for layer in self.modules():
+            if isinstance(layer, LayerNorm) and hasattr(layer, 'weight'):
+                del layer.weight
+            
         if self.with_mlm:
             del self.mlmLayerNorm
             del self.mlmBias
             del self.mlmDense
             self.mlmDecoder.register_parameter('bias', None)
-        self.model_type = 'roformer_v2'
 
     def variable_mapping(self):
         mapping = super().variable_mapping()

@@ -4,7 +4,8 @@ from typing import List, Optional, Tuple, Union
 from bert4torch.layers import MllamaCrossAttentionDecoderLayer
 from bert4torch.models.llama import LLaMA
 from bert4torch.models.base import PreTrainedModelForDecoder
-from bert4torch.snippets import DottableDict, inference_mode
+from bert4torch.snippets import DottableDict
+from bert4torch.models.modeling_utils import inference_mode
 from torch import nn
 import torch
 
@@ -14,8 +15,8 @@ class MllamaTextModel(LLaMA):
     '''Mllama的语音模型，主要区别是部分layer是cross_attention的'''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        kwargs.update({'p_bias': 'rotary', 'weight': True, 'bias': False, 'norm_mode': 'rmsnorm', 
-                'is_decoder': True, 'final_layernorm': True, 'pre_layernorm': True, 
+        kwargs.update({'pos_emb_type': 'rotary', 'bias': False, 'norm_mode': 'rmsnorm', 
+                'final_layernorm': True, 'pre_layernorm': True, 
                 'mlp_type': 'LlamaFeedForward'})
         for layer_idx in range(self.num_hidden_layers):
             if layer_idx in kwargs['cross_attention_layers']:

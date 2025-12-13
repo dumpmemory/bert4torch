@@ -4,8 +4,9 @@ import gc
 import inspect
 from torch.utils.checkpoint import CheckpointFunction
 from torch4keras.snippets import log_info, log_warn, log_error, is_accelerate_available, find_tied_parameters, log_warn_once
-from typing import Union, Optional
+from typing import Union, Optional, List
 from functools import partial, wraps
+from packaging import version
 
 
 if is_accelerate_available():
@@ -308,3 +309,64 @@ def find_all_linear_names(peft_model, int4=False, int8=False, ignore_names=['lm_
             names = name.split('.')
             lora_module_names.add(names[0] if len(names) == 1 else names[-1])
     return sorted(lora_module_names)
+
+
+def safe_register_parameter(
+        module_or_list:Union[nn.Module, List[nn.ModuleList]], 
+        name:str, 
+        param:Optional[torch.nn.Parameter]
+    ):
+    '''安全地注册参数，当param为None时，跳过注册'''
+    if isinstance(module_or_list, nn.Module):
+        module_or_list = [module_or_list]
+
+    for module in module_or_list:
+        try:
+            module: nn.Module
+            module.register_parameter(name, param)
+        except KeyError as e:
+            if ''.join(e.args) == f"attribute '{name}' already exists":
+                pass
+            else:
+                # 重新抛出其他 KeyError
+                raise
+        except:
+            raise
+
+
+def has_meta_param(model:nn.Module, verbose:bool=False):
+    '''是否有meta的param'''
+    meta_names = [name_ for name_, para_ in model.named_parameters() if para_.device == torch.device('meta')]
+
+    if len(meta_names) > 0:
+        if verbose:
+            log_error(f'Meta device not allowed: {meta_names}')
+        return True
+    return False
+
+
+def get_weight_decay_optim_groups(module:nn.Module, weight_decay:float) -> dict:
+    '''获取weight_decay的参数列表'''
+    # start with all of the candidate parameters
+    param_dict = {pn: p for pn, p in module.named_parameters()}
+    # filter out those that do not require grad
+    param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
+    # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
+    # i.e. all weight tensors in matmuls + embeddings decay, all biases and layernorms don't.
+    decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
+    nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
+    optim_groups = [
+        {'params': decay_params, 'weight_decay': weight_decay},
+        {'params': nodecay_params, 'weight_decay': 0.0}
+    ]
+    num_decay_params = sum(p.numel() for p in decay_params)
+    num_nodecay_params = sum(p.numel() for p in nodecay_params)
+    log_info(f"num decayed parameter tensors: {len(decay_params)}, with {num_decay_params:,} parameters")
+    log_info(f"num non-decayed parameter tensors: {len(nodecay_params)}, with {num_nodecay_params:,} parameters")
+    return optim_groups
+
+
+if version.parse(torch.__version__) >= version.parse("1.10.0"):
+    inference_mode = torch.inference_mode
+else:
+    inference_mode = torch.no_grad

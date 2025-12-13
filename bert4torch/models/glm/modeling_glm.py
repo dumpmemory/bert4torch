@@ -14,13 +14,12 @@ class GLM(Decoder):
     '''
     _no_split_modules = ["GlmLayer"]
     def __init__(self, *args, layer_type='GlmLayer', **kwargs):
-        kwargs.update({'layer_type': layer_type, 'p_bias': 'rotary', 'weight': True, 'is_decoder': True, 'final_layernorm': True})
+        kwargs.update({'layer_type': layer_type, 'pos_emb_type': 'rotary', 'final_layernorm': True})
         super().__init__(*args, **kwargs)
         self.bos_token_id, self.mask_token_id, self.gmask_token_id = kwargs.get('bos_token_id'), kwargs.get('mask_token_id'), kwargs.get('gmask_token_id')
         self.rope_scaling_type = kwargs.get('rope_scaling', {}).get('type')
         del self.embeddings.layerNorm
         self.LayerNormFinal = torch.nn.LayerNorm(self.hidden_size, eps=kwargs.get('layer_norm_eps', 1e-12))
-        self.model_type = 'glm'
 
     def load_trans_ckpt(self, checkpoint):
         state_dict = super().load_trans_ckpt(checkpoint)

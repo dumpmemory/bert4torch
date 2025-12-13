@@ -2,7 +2,7 @@ from bert4torch.models.base import BertBase
 import torch
 from bert4torch.snippets import delete_arguments
 from bert4torch.layers import LayerNorm, BlockIdentity
-from bert4torch.snippets import safe_register_parameter
+from bert4torch.models.modeling_utils import safe_register_parameter
 try:
     from transformers.modeling_attn_mask_utils import _prepare_4d_attention_mask
 except:
@@ -12,11 +12,10 @@ except:
 class ModernBert(BertBase):
     @delete_arguments('with_pool', 'with_nsp')
     def __init__(self, *args, **kwargs):
-        kwargs.update({'mlp_type': 'LlamaFeedForward', 'bias':False, 'p_bias': 'rotary',
+        kwargs.update({'mlp_type': 'LlamaFeedForward', 'bias':False, 'pos_emb_type': 'rotary',
                        'attn_type': 'ModernBertAttention', 'norm_mode': 'torch_buildin', 
                        'pre_layernorm':True})
         super(ModernBert, self).__init__(*args, **kwargs)
-        self.model_type = 'modernbert'
         self.local_attention = kwargs['local_attention']
         self.LayerNormFinal = LayerNorm(self.hidden_size, eps=kwargs.get('layer_norm_eps', 1e-12), 
                                         conditional_size=self.conditional_size, 

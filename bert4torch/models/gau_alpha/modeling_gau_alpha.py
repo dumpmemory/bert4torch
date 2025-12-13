@@ -1,17 +1,20 @@
 from bert4torch.models.roformer import RoFormerV2
 from torch import nn
 import copy
-from bert4torch.layers import BlockIdentity, GAULayer
+from bert4torch.layers import BlockIdentity, GAULayer, LayerNorm
 
 
 class GAU_alpha(RoFormerV2):
     def __init__(self, *args, **kwargs):
-        kwargs.update({'p_bias': 'rotary', 'weight': False, 'bias': False, 'norm_mode': 'rmsnorm', 'normalization': 'softmax_plus'})
+        kwargs.update({'pos_emb_type': 'rotary', 'bias': False, 'norm_mode': 'rmsnorm', 'normalization': 'softmax_plus'})
         super().__init__(*args, **kwargs)
 
         layer = GAULayer(**kwargs)
         self.encoderLayer = nn.ModuleList([copy.deepcopy(layer) if layer_id in self.keep_hidden_layers else BlockIdentity() for layer_id in range(self.num_hidden_layers)])
-        self.model_type = 'gau_alpha'
+        # LayerNorm没有weight
+        for layer in self.modules():
+            if isinstance(layer, LayerNorm) and hasattr(layer, 'weight'):
+                del layer.weight
 
     def load_variable(self, variable, ckpt_key, model_key):
         if ckpt_key in {'embeddings.word_embeddings.weight', 'mlmDecoder.weight'}:

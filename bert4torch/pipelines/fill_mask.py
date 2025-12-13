@@ -4,6 +4,7 @@ from typing import List, Union, Dict
 import numpy as np
 import torch
 from bert4torch.snippets import sequence_padding
+from bert4torch.models.modeling_utils import inference_mode
 from .base import PipeLineBase
 from tqdm.autonotebook import trange
 
@@ -23,7 +24,7 @@ class FillMask(PipeLineBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, with_mlm='softmax', **kwargs)
 
-    @torch.inference_mode()
+    @inference_mode()
     def predict(
             self,
             sentences: Union[str, List[str]],

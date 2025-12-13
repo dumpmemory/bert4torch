@@ -3,7 +3,7 @@ from torch import nn
 from typing import List, Dict, Literal
 import torch
 from torch4keras.snippets import log_warn
-from bert4torch.snippets import has_meta_param
+from bert4torch.models.modeling_utils import has_meta_param
 from .base import QuantizerBase
 import importlib
 from packaging import version

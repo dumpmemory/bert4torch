@@ -16,7 +16,6 @@ class GPT2(Decoder):
         kwargs['final_layernorm'] = kwargs.get('final_layernorm', True)
         super(GPT2, self).__init__(*args, **kwargs)
         del self.embeddings.layerNorm
-        self.model_type = 'gpt2'
 
     def load_trans_ckpt(self, checkpoint):
         state_dict = super().load_trans_ckpt(checkpoint)

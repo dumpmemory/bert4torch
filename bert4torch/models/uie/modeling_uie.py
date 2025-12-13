@@ -26,7 +26,6 @@ class UIE(BertBase):
             def hook(module, input, output):
                 return output+task_type_embeddings(torch.zeros(input[0].size(), dtype=torch.int64, device=input[0].device))
             self.embeddings.word_embeddings.register_forward_hook(hook)
-        self.model_type = 'uie'
         
     def apply_final_layers(self, **model_kwargs):
         outputs = super().apply_final_layers(**model_kwargs)

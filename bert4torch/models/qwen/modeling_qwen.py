@@ -9,10 +9,6 @@ class Qwen(Qwen2):
     3) 和InternLM基本一致, 唯一的差别是InternLM的multiHeadAttention.o有bias
     4) Qwen2的qkv是分开的，Qwen的qkv是合在一起的
     '''
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.model_type = 'qwen'
-
     def load_trans_ckpt(self, checkpoint):
         '''原始权重中qkv是一个全连接, 需要拆分成q,k,v'''
         state_dict = super().load_trans_ckpt(checkpoint)

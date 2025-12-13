@@ -8,8 +8,8 @@ class T5_Encoder(Encoder):
     _no_split_modules = ["T5Layer"]
     @insert_arguments(version='t5.1.0')
     def __init__(self, *args, layer_type='T5Layer', **kwargs):
-        # p_bias来控制embedding阶段无pos_embedding，t5不使用bias，并且使用rmsnorm
-        kwargs.update({'p_bias': 't5_relative', 'layer_type': layer_type,
+        # pos_emb_type来控制embedding阶段无pos_embedding，t5不使用bias，并且使用rmsnorm
+        kwargs.update({'pos_emb_type': 't5_relative', 'layer_type': layer_type,
                        'relative_attention_num_buckets': kwargs.get('relative_attention_num_buckets'), 
                        'version': self.version, 'bias': False, 'norm_mode': 'rmsnorm'})
         super().__init__(*args, **kwargs)
@@ -17,7 +17,6 @@ class T5_Encoder(Encoder):
 
         self.final_layer_norm = LayerNorm(self.hidden_size, eps=1e-12, conditional_size=self.conditional_size, bias=False, norm_mode='rmsnorm')
         self.dropout = nn.Dropout(self.dropout_rate)
-        self.model_type = 't5_encoder'
         self.tie_weights()
 
     def tie_weights(self):
@@ -66,14 +65,13 @@ class T5_Decoder(Decoder):
     _no_split_modules = ["T5Layer"]
     @insert_arguments(version='t5.1.0')
     def __init__(self, *args, **kwargs):
-        # p_bias来控制embedding阶段无pos_embedding，t5不使用bias，并且使用rmsnorm
-        kwargs.update({'p_bias': 't5_relative', 'relative_attention_num_buckets': kwargs.get('relative_attention_num_buckets'), 'version': self.version,
+        # pos_emb_type来控制embedding阶段无pos_embedding，t5不使用bias，并且使用rmsnorm
+        kwargs.update({'pos_emb_type': 't5_relative', 'relative_attention_num_buckets': kwargs.get('relative_attention_num_buckets'), 'version': self.version,
                        'bias': False, 'norm_mode': 'rmsnorm', 'layer_type': 'T5Layer', 'is_decoder':True})
         super().__init__(*args, **kwargs)
         del self.embeddings.layerNorm        
         self.final_layer_norm = LayerNorm(self.hidden_size, eps=1e-12, conditional_size=self.conditional_size, bias=False, norm_mode='rmsnorm')
         self.dropout = nn.Dropout(self.dropout_rate)
-        self.model_type = 't5_decoder'
         self.tie_weights()
 
     def tie_weights(self):
@@ -144,7 +142,6 @@ class T5(Transformer):
         kwargs['add_cross_attention'] = True
         kwargs['logit_scale'] = kwargs.get('logit_scale', True)
         self.decoder = T5_Decoder(*args, **kwargs)
-        self.model_type = 't5'
     
     def load_variable(self, variable, ckpt_key, model_key):
         # 加载单个变量的函数

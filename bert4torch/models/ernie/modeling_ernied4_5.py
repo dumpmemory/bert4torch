@@ -4,12 +4,10 @@ from bert4torch.models.base import Decoder
 class Ernied4_5(Decoder):
     '''百度Ernied4_5大模型
     '''
-    def __init__(self, *args, p_bias='rotary', **kwargs):
-        kwargs.update({'p_bias': p_bias, 'weight': True, 'bias': False, 'norm_mode': 'rmsnorm', 
-                       'is_decoder': True, 'final_layernorm': True, 'pre_layernorm': True,
-                       'mlp_type': 'LlamaFeedForward'})
+    def __init__(self, *args, pos_emb_type='rotary', **kwargs):
+        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': False, 'norm_mode': 'rmsnorm', 
+                       'final_layernorm': True, 'pre_layernorm': True, 'mlp_type': 'LlamaFeedForward'})
         super().__init__(*args, **kwargs)
-        self.model_type = 'ernied4_5'
         del self.embeddings.layerNorm
 
     def variable_mapping(self):

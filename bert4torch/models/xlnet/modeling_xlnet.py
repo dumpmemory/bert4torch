@@ -1,4 +1,4 @@
-from bert4torch.models.transformer_xl import Transformer_XL
+from .modeling_transformer_xl import Transformer_XL
 import torch
 from torch4keras.snippets import safe_torch_load
 
@@ -12,7 +12,6 @@ class XLNET(Transformer_XL):
         self.bi_data = bi_data
         kwargs['rel_shift_opt'] = 'xlnet'
         super().__init__(*args, **kwargs)
-        self.model_type = 'xlnet'
     
     def relative_positional_encoding(self, qlen, klen, device):
         # 生成pos_emb, 这里使用sincos的位置编码, transformer_xl里面有-1
