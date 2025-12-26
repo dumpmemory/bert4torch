@@ -3,15 +3,7 @@ import torch
 
 
 class InternLM2(Decoder):
-    def __init__(self, 
-        *args, 
-        pos_emb_type='rotary', 
-        bias=False,
-        **kwargs
-    ):
-        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': bias, 'norm_mode': 'rmsnorm', 
-                       'final_layernorm': True, 'pre_layernorm': True,
-                       'mlp_type': 'LlamaFeedForward'})
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         del self.embeddings.layerNorm
 

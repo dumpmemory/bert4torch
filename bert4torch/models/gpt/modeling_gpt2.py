@@ -11,9 +11,6 @@ class GPT2(Decoder):
     4. 有final_layernorm
     """
     def __init__(self, *args, **kwargs):
-        kwargs['tie_word_embeddings'] = kwargs.get('tie_word_embeddings', True)
-        kwargs['pre_layernorm'] = kwargs.get('pre_layernorm', True)
-        kwargs['final_layernorm'] = kwargs.get('final_layernorm', True)
         super(GPT2, self).__init__(*args, **kwargs)
         del self.embeddings.layerNorm
 

@@ -16,7 +16,7 @@ import torch
 from torch import nn, optim
 from tqdm import tqdm
 
-# BERT base
+# 模型路径
 config_path = 'E:/Github/天池新闻分类/top1/pre_models/bert_config.json'
 checkpoint_path = 'E:/Github/天池新闻分类/top1/pre_models/pytorch_model.bin'
 dict_path = 'E:/Github/天池新闻分类/top1/pre_models/vocab.txt'

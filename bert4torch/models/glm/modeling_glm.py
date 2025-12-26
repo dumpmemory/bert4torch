@@ -13,8 +13,7 @@ class GLM(Decoder):
     5) embedding之后没有layernorm
     '''
     _no_split_modules = ["GlmLayer"]
-    def __init__(self, *args, layer_type='GlmLayer', **kwargs):
-        kwargs.update({'layer_type': layer_type, 'pos_emb_type': 'rotary', 'final_layernorm': True})
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bos_token_id, self.mask_token_id, self.gmask_token_id = kwargs.get('bos_token_id'), kwargs.get('mask_token_id'), kwargs.get('gmask_token_id')
         self.rope_scaling_type = kwargs.get('rope_scaling', {}).get('type')

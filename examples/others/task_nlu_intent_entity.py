@@ -24,7 +24,7 @@ from bert4torch.callbacks import AdversarialTraining
 maxlen = 256
 batch_size = 16
 
-# BERT base
+# 模型路径
 config_path = './chinese_L-12_H-768_A-12/bert4torch_config.json'
 checkpoint_path = './chinese_L-12_H-768_A-12/pytorch_model.bin'
 dict_path = './chinese_L-12_H-768_A-12/vocab.txt'

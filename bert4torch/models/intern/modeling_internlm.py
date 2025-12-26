@@ -9,19 +9,9 @@ class InternLM(Decoder):
     1) FeedForward和Llama一致, 三个dense层
     2) 除了qkvo有bias, 其余均没有bias
     '''
-    def __init__(self, *args, pos_emb_type='rotary', **kwargs):
-        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': True, 'norm_mode': 'rmsnorm', 
-                       'final_layernorm': True, 'pre_layernorm': True,
-                       'mlp_type': 'LlamaFeedForward'})
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         del self.embeddings.layerNorm
-
-        # 修改网络结构
-        kwargs.pop('bias')
-        for layer in self.decoderLayer:
-            layer.feedForward = LlamaFeedForward(self.hidden_size, **kwargs)
-            safe_register_parameter([layer.attnLayerNorm, layer.ffnLayerNorm], 'bias', None)
-        safe_register_parameter(self.LayerNormFinal, 'bias', None)
 
     def variable_mapping(self):
         # 映射到权重格式

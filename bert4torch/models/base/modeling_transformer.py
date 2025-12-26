@@ -33,6 +33,7 @@ class PreTrainedModelForDecoder(PreTrainedModel):
                      'attention_mask', 'past_key_values', 'cross_past_key_values'}
 
     def __init__(self, *args, **kwargs):
+        kwargs['is_decoder'] = True
         super().__init__(*args, **kwargs)
             
     def prepare_inputs_for_generation(self, *inputs, **states):
@@ -94,7 +95,7 @@ class Decoder(LM_Mask, BertBase, PreTrainedModelForDecoder):
     '''所有decoder模型的基类(含大模型)'''
     @delete_arguments('with_pool', 'with_mlm', 'with_nsp')
     @insert_arguments(with_lm=True)
-    def __init__(self, *args, logit_scale:bool=False, final_layernorm:bool=False, 
+    def __init__(self, *args, logit_scale:Union[bool,int,float]=False, final_layernorm:bool=False, 
                  convert_logits_dtype:Literal['float16', 'float32', 'float64', 'bfloat16', None]=None, **kwargs):
         '''
         :param logit_scale: bool, 是否对logits进行缩放
@@ -111,7 +112,8 @@ class Decoder(LM_Mask, BertBase, PreTrainedModelForDecoder):
         mapping = {'float16': torch.float16, 'bfloat16': torch.bfloat16, 'float32': torch.float32, 'float64': torch.float64}
         self.convert_logits_dtype = mapping[convert_logits_dtype] if convert_logits_dtype is not None else None
         self.num_logits_to_keep = kwargs.get('num_logits_to_keep', 0)
-
+        self.attn_type = kwargs.get('attn_type')
+        
         # 从hidden_states映射到logit
         if self.with_lm:
             self.lm_head = nn.Linear(self.hidden_size, self.vocab_size, bias=False)
@@ -125,9 +127,12 @@ class Decoder(LM_Mask, BertBase, PreTrainedModelForDecoder):
             self.logit_scale = logit_scale
         
         if self.final_layernorm:
-            self.LayerNormFinal = LayerNorm(self.hidden_size, eps=kwargs.get('layer_norm_eps', 1e-12), 
-                                            conditional_size=self.conditional_size, norm_mode=kwargs.get('norm_mode', 'normal'), 
-                                            rmsnorm_fp32=kwargs.get('rmsnorm_fp32', 'llama-qwen'), bias=kwargs.get('bias', True))
+            self.LayerNormFinal = LayerNorm(
+                self.hidden_size, layer_norm_eps=kwargs.get('layer_norm_eps', 1e-12), 
+                conditional_size=self.conditional_size, layer_norm_mode=kwargs.get('norm_mode', 'normal'), 
+                rmsnorm_fp32=kwargs.get('rmsnorm_fp32', 'llama-qwen'), 
+                use_bias=kwargs.get('use_bias', True)
+                )
 
     def tie_weights(self):
         # decoder底层的embedding和顶层的全连接共享

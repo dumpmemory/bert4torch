@@ -19,7 +19,7 @@ batch_size = 16
 categories_label2id = {"LOC": 0, "ORG": 1, "PER": 2}
 categories_id2label = dict((value, key) for key,value in categories_label2id.items())
 
-# BERT base
+# 模型路径
 config_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/bert4torch_config.json'
 checkpoint_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/pytorch_model.bin'
 dict_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/vocab.txt'

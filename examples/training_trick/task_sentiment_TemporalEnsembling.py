@@ -19,7 +19,7 @@ maxlen = 256
 batch_size = 16
 epochs = 10
 
-# BERT base
+# 模型路径
 config_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/bert4torch_config.json'
 checkpoint_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/pytorch_model.bin'
 dict_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/vocab.txt'

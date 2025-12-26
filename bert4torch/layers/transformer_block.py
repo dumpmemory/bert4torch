@@ -43,7 +43,6 @@ class BertLayer(nn.Module):
         ):
         super(BertLayer, self).__init__()
         self.dropout_rate = dropout_rate
-        layer_norm_eps = kwargs.get('layer_norm_eps', 1e-12)
         self.pre_layernorm = pre_layernorm  # True表示pre, False表示post
         self.apply_residual_post_layernorm = apply_residual_post_layernorm
         self.is_decoder = kwargs.get('is_decoder', False)
@@ -53,18 +52,17 @@ class BertLayer(nn.Module):
         
         # self attention
         self.multiHeadAttention = ATTENTION_MAP[self.attn_type](hidden_size, num_attention_heads, attention_probs_dropout_prob, dropout_rate, **kwargs)
-        self.attnLayerNorm = LayerNorm(hidden_size, eps=layer_norm_eps, conditional_size=conditional_size, **kwargs)
+        self.attnLayerNorm = LayerNorm(hidden_size, conditional_size=conditional_size, **kwargs)
 
         # feedforward
-        kwargs['bias'] = kwargs.get('bias', False)
         self.feedForward = MLP_MAP[self.mlp_type](hidden_size, intermediate_size, dropout_rate=dropout_rate, 
                                                   hidden_act=hidden_act, is_dropout=is_dropout, **kwargs)
-        self.ffnLayerNorm = LayerNorm(hidden_size, eps=layer_norm_eps, conditional_size=conditional_size, **kwargs)
+        self.ffnLayerNorm = LayerNorm(hidden_size, conditional_size=conditional_size, **kwargs)
 
         # cross attention
         if self.add_cross_attention and self.is_decoder:
             self.crossAttention = ATTENTION_MAP[self.attn_type](hidden_size, num_attention_heads, attention_probs_dropout_prob, dropout_rate, **kwargs)
-            self.crossLayerNorm = LayerNorm(hidden_size, eps=layer_norm_eps, conditional_size=conditional_size, **kwargs)
+            self.crossLayerNorm = LayerNorm(hidden_size, conditional_size=conditional_size, **kwargs)
 
     def forward(self, 
                 hidden_states:torch.FloatTensor=None, 
@@ -180,7 +178,7 @@ class XlnetLayer(BertLayer):
         super().__init__(hidden_size, num_attention_heads, dropout_rate, attention_probs_dropout_prob, intermediate_size, hidden_act, **kwargs)
         self.pre_layernorm = kwargs.get('pre_layernorm')
         # multiattn层无bias
-        self.multiHeadAttention = TransformerxlMultiHeadAttn(hidden_size, num_attention_heads, attention_probs_dropout_prob, bias=False, **kwargs)
+        self.multiHeadAttention = TransformerxlMultiHeadAttn(hidden_size, num_attention_heads, attention_probs_dropout_prob, use_bias=False, **kwargs)
 
     def forward(self, hidden_states=None, segment_ids=None, pos_emb=None, attention_mask=None, mems_i=None, conditional_emb=None, **model_kwargs):
         # 拼接mems和query，mems_i: [btz, m_len, hdsz], w: [btz, q_len, hdsz] = [btz, k_len, hdsz]

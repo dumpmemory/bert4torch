@@ -15,9 +15,6 @@ class MllamaTextModel(LLaMA):
     '''Mllama的语音模型，主要区别是部分layer是cross_attention的'''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        kwargs.update({'pos_emb_type': 'rotary', 'bias': False, 'norm_mode': 'rmsnorm', 
-                'final_layernorm': True, 'pre_layernorm': True, 
-                'mlp_type': 'LlamaFeedForward'})
         for layer_idx in range(self.num_hidden_layers):
             if layer_idx in kwargs['cross_attention_layers']:
                 self.decoderLayer[layer_idx] = MllamaCrossAttentionDecoderLayer(layer_idx=layer_idx, **self.get_kw(*self._layer_args, **kwargs))
@@ -31,8 +28,8 @@ class Mllama(PreTrainedModelForDecoder):
     ]
     passed_kwargs = PreTrainedModelForDecoder.passed_kwargs | {'pixel_values', 'aspect_ratio_ids', 'aspect_ratio_mask', 'cross_attention_mask'}
     def __init__(self, **config):
+        super().__init__(**config)
         self.config = DottableDict(config)
-        super().__init__(**self.config)
         from transformers.models.mllama.modeling_mllama import MllamaVisionModel
         from transformers.models.mllama.configuration_mllama import MllamaConfig, MllamaVisionConfig
         vision_config = MllamaVisionConfig.from_dict(self.config.vision_config)

@@ -9,11 +9,9 @@ class RoFormer(BertBase):
     """旋转式位置编码的BERT模型；
     链接：https://kexue.fm/archives/8265
     """
-    def __init__(self, *args, **kwargs):
-        kwargs.update({'pos_emb_type': 'rotary'})  # 指定在attention阶段使用rotary编码
-        super(RoFormer, self).__init__(*args, **kwargs)
-        self.load_variable = partial(super().load_variable, prefix='roformer')
-
+    def load_variable(self, variable, ckpt_key, model_key, prefix='roformer'):
+        return super().load_variable(variable, ckpt_key, model_key, prefix)
+    
     def variable_mapping(self):
         mapping =  super().variable_mapping(prefix='roformer')
         del mapping['embeddings.position_embeddings.weight'] # 没有位置编码
@@ -26,7 +24,6 @@ class RoFormerV2(RoFormer):
     """
     @delete_arguments('with_pool', 'with_nsp')
     def __init__(self, *args, **kwargs):
-        kwargs.update({'pos_emb_type': 'rotary', 'bias': False, 'norm_mode': 'rmsnorm'})
         super(RoFormerV2, self).__init__(*args, **kwargs)
 
         # LayerNorm没有weight

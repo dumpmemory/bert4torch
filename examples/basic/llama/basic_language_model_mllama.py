@@ -39,7 +39,7 @@ def chat_demo1():
             return_tensors="pt"
         ).to(device)
 
-        output = model.generate(**inputs, max_new_tokens=30)
+        output = model.generate(**inputs, max_new_tokens=512)
         print(processor.decode(output[0]))
 
 

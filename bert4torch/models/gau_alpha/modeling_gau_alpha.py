@@ -6,7 +6,6 @@ from bert4torch.layers import BlockIdentity, GAULayer, LayerNorm
 
 class GAU_alpha(RoFormerV2):
     def __init__(self, *args, **kwargs):
-        kwargs.update({'pos_emb_type': 'rotary', 'bias': False, 'norm_mode': 'rmsnorm', 'normalization': 'softmax_plus'})
         super().__init__(*args, **kwargs)
 
         layer = GAULayer(**kwargs)

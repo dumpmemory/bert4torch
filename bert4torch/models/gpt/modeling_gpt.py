@@ -9,7 +9,6 @@ class GPT(Decoder):
     2. embedding没有加LayerNormalization层
     """
     def __init__(self, *args, **kwargs):
-        kwargs['tie_word_embeddings'] = kwargs.get('tie_word_embeddings', True)
         super(GPT, self).__init__(*args, **kwargs)
         del self.embeddings.layerNorm
 

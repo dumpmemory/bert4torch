@@ -902,6 +902,7 @@ class InternVL(ChatVLBase):
 
 VLM_MAPPING = {
     'minicpmv': MiniCPMV,
+    'minicpm_llama3_v': MiniCPMV,
     'qwen2_vl': Qwen2VL,
     'mllama': Mllama,
     'glm4v': GLM4V,

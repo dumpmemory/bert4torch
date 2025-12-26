@@ -25,7 +25,7 @@ batch_size = 32
 replacing_rate = 0.5
 steps_for_replacing = 2000
 
-# BERT base
+# 模型路径
 config_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/bert4torch_config.json'
 checkpoint_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/pytorch_model.bin'
 dict_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/vocab.txt'

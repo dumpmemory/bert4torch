@@ -11,9 +11,8 @@ class GLM2(GLM):
     """
     _no_split_modules = ["Glm2Layer"]
     def __init__(self, *args, **kwargs):
-        kwargs.update({'layer_type': "Glm2Layer", 'norm_mode': 'rmsnorm', 'rmsnorm_fp32': 'glm', 'pre_layernorm': True})
         super().__init__(*args, **kwargs)
-        self.LayerNormFinal = LayerNorm(self.hidden_size, eps=kwargs.get('layer_norm_eps', 1e-5), norm_mode='rmsnorm', bias=False)
+        self.LayerNormFinal = LayerNorm(self.hidden_size, layer_norm_eps=kwargs.get('layer_norm_eps', 1e-5), layer_norm_mode='rmsnorm')
 
     def load_trans_ckpt(self, checkpoint, prefix=''):
         state_dict = super().load_trans_ckpt(checkpoint)

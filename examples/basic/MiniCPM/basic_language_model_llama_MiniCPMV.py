@@ -5,8 +5,7 @@ import requests
 from bert4torch.pipelines import Chat
 
 
-# E:/data/pretrain_ckpt/openbmb/MiniCPM-Llama3-V-2_5
-# E:/data/pretrain_ckpt/openbmb/MiniCPM-V-2_6
+# model_dir = "E:/data/pretrain_ckpt/openbmb/MiniCPM-Llama3-V-2_5"
 model_dir = "E:/data/pretrain_ckpt/openbmb/MiniCPM-V-2_6"
 
 def chat_demo1():

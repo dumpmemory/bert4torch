@@ -2,25 +2,18 @@
 # 基本测试：uer的gpt2 chinese的效果测试
 # 项目链接：https://huggingface.co/uer/gpt2-chinese-cluecorpussmall
 
-ckpt_dir = 'E:/data/pretrain_ckpt/uer/gpt2-chinese-cluecorpussmall/'
-texts = ['这是很久之前的事情了', '话说当年']
-
-# ===============transformers======================
-# from transformers import BertTokenizer, GPT2LMHeadModel, TextGeneration
-# tokenizer = BertTokenizer.from_pretrained(ckpt_dir)
-# model = GPT2LMHeadModel.from_pretrained(ckpt_dir)
-# text_generator = TextGeneration(model, tokenizer)   
-# output = text_generator(texts, max_length=100, do_sample=True)
-# print('====transformers结果====')
-# print(output)
-
-# ===============bert4torch======================
 import torch
 from bert4torch.models import build_transformer_model
 from bert4torch.tokenizers import Tokenizer
 from bert4torch.generation import AutoRegressiveDecoder, SeqGeneration
 import os
+import time
 
+
+ckpt_dir = 'E:/data/pretrain_ckpt/uer/gpt2-chinese-cluecorpussmall/'
+texts = ['这是很久之前的事情了', '话说当年']
+
+# ===============bert4torch======================
 config_path = ckpt_dir + 'bert4torch_config.json'
 checkpoint_path = ckpt_dir + 'pytorch_model.bin'
 dict_path = ckpt_dir + 'vocab.txt'
@@ -83,6 +76,7 @@ for text, result in zip(texts, results):
 
 
 print('==============默认stream================')
+time.sleep(5)
 article_completion = SeqGeneration(model, tokenizer, bos_token_id=None, eos_token_id=eos_token_id, mode=mode,
                                    max_length=100, default_rtype='logits', use_states=True)
 text = texts[0]
@@ -97,6 +91,17 @@ generate_configs = {'tokenizer': tokenizer, 'bos_token_id': None, 'eos_token_id'
 for text in texts:
     print(model.generate(text, **generate_configs))
 print(model.generate(texts, **generate_configs))  # 批量生成
+time.sleep(5)
 for output in model.stream_generate(text, **generate_configs):
     os.system('clear')
     print(output, flush=True)
+
+
+# ===============transformers======================
+from transformers import BertTokenizer, GPT2LMHeadModel, TextGeneration
+tokenizer = BertTokenizer.from_pretrained(ckpt_dir)
+model = GPT2LMHeadModel.from_pretrained(ckpt_dir)
+text_generator = TextGeneration(model, tokenizer)   
+output = text_generator(texts, max_length=100, do_sample=True)
+print('====transformers结果====')
+print(output)

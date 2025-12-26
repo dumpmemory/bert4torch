@@ -49,7 +49,6 @@ class MultiHeadAttention(nn.Module):
                  dropout_rate:float=0.1, 
                  attention_scale:bool=True,
                  output_attentions:bool=False, 
-                 bias:bool=True, 
                  rope_scaling:dict=None, 
                  _attn_implementation:Literal['sdpa', 'xformers', 'flash_attn_2', 'eager']='eager', 
                  use_logn_attn:bool=None, 
@@ -64,7 +63,7 @@ class MultiHeadAttention(nn.Module):
         self.is_decoder = kwargs.get('is_decoder', False)
         self.attention_scale = attention_scale
         self.output_attentions = output_attentions
-        self.bias = bias
+        self.bias = kwargs.get('attention_bias', kwargs.get('use_bias', True))
         self.rope_scaling = rope_scaling or dict()
         self.layer_idx = layer_idx
         self.sliding_window = kwargs.get('sliding_window')
@@ -90,10 +89,10 @@ class MultiHeadAttention(nn.Module):
         if kwargs.get('longlora_group_size') is not None:
             self.longlora_group_size = kwargs.get('longlora_group_size')
 
-        self.q = nn.Linear(hidden_size, q_inner_dim, bias=bias)
-        self.k = nn.Linear(hidden_size, k_inner_dim_tmp if hasattr(self, 'num_key_value_heads') else k_inner_dim, bias=bias)
-        self.v = nn.Linear(hidden_size, v_inner_dim_tmp if hasattr(self, 'num_key_value_heads') else v_inner_dim, bias=bias)
-        self.o = nn.Linear(v_inner_dim, hidden_size, bias=bias)
+        self.q = nn.Linear(hidden_size, q_inner_dim, bias=self.bias)
+        self.k = nn.Linear(hidden_size, k_inner_dim_tmp if hasattr(self, 'num_key_value_heads') else k_inner_dim, bias=self.bias)
+        self.v = nn.Linear(hidden_size, v_inner_dim_tmp if hasattr(self, 'num_key_value_heads') else v_inner_dim, bias=self.bias)
+        self.o = nn.Linear(v_inner_dim, hidden_size, bias=self.bias)
         self.dropout = nn.Dropout(attention_probs_dropout_prob) if attention_probs_dropout_prob > 0 else lambda x: x
         self.init_position_encoding(**kwargs)
 
@@ -464,8 +463,8 @@ class Qwen3Attention(RopeAttention):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         layer_norm_eps = kwargs.get('layer_norm_eps', 1e-6)
-        self.q_norm = LayerNorm(self.attention_head_size, norm_mode='rmsnorm', eps=layer_norm_eps, bias=self.bias)
-        self.k_norm = LayerNorm(self.attention_key_size, norm_mode='rmsnorm', eps=layer_norm_eps, bias=self.bias)
+        self.q_norm = LayerNorm(self.attention_head_size, layer_norm_mode='rmsnorm', layer_norm_eps=layer_norm_eps)
+        self.k_norm = LayerNorm(self.attention_key_size, layer_norm_mode='rmsnorm', layer_norm_eps=layer_norm_eps)
 
     def transpose_for_q_scores(self, x):
         return self.q_norm(super().transpose_for_q_scores(x))
@@ -483,7 +482,7 @@ class GatedAttention(nn.Module):
     '''
     
     def __init__(self, hidden_size, attention_key_size, intermediate_size, attention_probs_dropout_prob, hidden_act, 
-                 is_dropout=False, attention_scale=True, bias=True, normalization='softmax_plus', **kwargs):
+                 is_dropout=False, attention_scale=True, normalization='softmax_plus', **kwargs):
         super().__init__()
         self.intermediate_size = intermediate_size
         self.attention_head_size = attention_key_size
@@ -492,6 +491,7 @@ class GatedAttention(nn.Module):
         self.normalization = normalization
         self.hidden_fn = get_activation(hidden_act)
         self.dropout = nn.Dropout(attention_probs_dropout_prob)
+        bias = kwargs.get('attention_bias', kwargs.get('use_bias', False))
         self.i_dense = nn.Linear(hidden_size, self.intermediate_size*2+attention_key_size, bias=bias)
         self.offsetscale = self.OffsetScale(attention_key_size, heads=2, bias=bias)
         self.o_dense = nn.Linear(self.intermediate_size, hidden_size, bias=bias)
@@ -686,12 +686,12 @@ class DeepseekV2Attention(MultiHeadAttention):
         else:
             del self.q
             self.q_a = nn.Linear(self.hidden_size, self.q_lora_rank, bias=self.bias)
-            self.q_a_layernorm = LayerNorm(self.q_lora_rank, norm_mode='rmsnorm', eps=layer_norm_eps, bias=self.bias)
+            self.q_a_layernorm = LayerNorm(self.q_lora_rank, layer_norm_mode='rmsnorm', layer_norm_eps=layer_norm_eps)
             self.q_b = nn.Linear(self.q_lora_rank, self.attention_key_size * self.q_head_dim, bias=self.bias)
 
         del self.k, self.v
         self.kv_a_proj_with_mqa = nn.Linear(self.hidden_size, self.kv_lora_rank + self.qk_rope_head_dim, bias=self.bias)
-        self.kv_a_layernorm = LayerNorm(self.kv_lora_rank, norm_mode='rmsnorm', eps=layer_norm_eps, bias=self.bias)
+        self.kv_a_layernorm = LayerNorm(self.kv_lora_rank, layer_norm_mode='rmsnorm', layer_norm_eps=layer_norm_eps)
         self.kv_b = nn.Linear(self.kv_lora_rank, self.num_attention_heads * 
                               (self.q_head_dim - self.qk_rope_head_dim + self.attention_head_size), bias=self.bias)
         self.o = nn.Linear(self.num_attention_heads * self.attention_head_size, self.hidden_size, bias=self.bias)
@@ -787,8 +787,8 @@ class MllamaTextCrossAttention(MultiHeadAttention):
     '''mllama部分层使用的crossattention'''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.q_norm = LayerNorm(self.attention_head_size, norm_mode='rmsnorm', eps=kwargs.get('layer_norm_eps', 1e-6), bias=False)
-        self.k_norm = LayerNorm(self.attention_key_size, norm_mode='rmsnorm', eps=kwargs.get('layer_norm_eps', 1e-6), bias=False)
+        self.q_norm = LayerNorm(self.attention_head_size, layer_norm_mode='rmsnorm', layer_norm_eps=kwargs.get('layer_norm_eps', 1e-6))
+        self.k_norm = LayerNorm(self.attention_key_size, layer_norm_mode='rmsnorm', layer_norm_eps=kwargs.get('layer_norm_eps', 1e-6))
 
     def _get_qkv_states(self, hidden_states, attention_mask, encoder_hidden_states, encoder_attention_mask, past_key_value, position_ids):
         query_states = self.transpose_for_q_scores(self.q(hidden_states))

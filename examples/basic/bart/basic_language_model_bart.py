@@ -22,6 +22,7 @@ from bert4torch.tokenizers import Tokenizer
 from bert4torch.generation import AutoRegressiveDecoder, Seq2SeqGeneration
 import os
 import torch
+import time
 
 # bert配置
 config_path = f'{ckpt_dir}/bert4torch_config.json'
@@ -34,7 +35,7 @@ maxlen = 20
 tokenizer = Tokenizer(dict_path, do_lower_case=True)
 model = build_transformer_model(config_path, checkpoint_path).to(device)
 
-print('==============自定义单条样本================')
+# print('==============自定义单条样本================')
 class AutoTitle(AutoRegressiveDecoder):
     """seq2seq解码器
     """
@@ -81,6 +82,7 @@ for text, result in zip(texts, results):
 
 
 print('==============默认stream================')
+time.sleep(5)
 text = texts[0]
 for output in autotitle.stream_generate(text, top_k=top_k):
     os.system('clear')

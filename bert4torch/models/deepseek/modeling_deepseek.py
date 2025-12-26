@@ -8,15 +8,11 @@ class DeepSeek(Decoder):
     1) FeedForward和Llama一致, 三个dense层
     2) 除了qkvo有bias, 其余均没有bias
     '''
-    def __init__(self, *args, pos_emb_type='rotary', **kwargs):
-        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': False, 'norm_mode': 'rmsnorm', 
-                       'final_layernorm': True, 'pre_layernorm': True, 'mlp_type': 'LlamaFeedForward'})
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.attn_type = kwargs.get('attn_type')
-        del self.embeddings.layerNorm
-
         # 修改网络结构
-        kwargs.pop('bias')
+        del self.embeddings.layerNorm
+        kwargs.pop('use_bias')
         self.n_routed_experts = kwargs.get('n_routed_experts')
         self.first_k_dense_replace = kwargs.get('first_k_dense_replace')
         self.moe_layer_freq = kwargs.get('moe_layer_freq')

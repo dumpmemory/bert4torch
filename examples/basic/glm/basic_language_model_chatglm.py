@@ -14,6 +14,7 @@
 '''
 from bert4torch.pipelines import Chat
 import re
+import os
 
 # ===================================参数=======================================
 # chatglm-6b, chatglm-6b-int4, chatglm-6b-int8
@@ -26,7 +27,7 @@ generation_config = {
     'top_p': 0.8, 
     'temperature': 0.8, 
     'include_input': True if re.search('glm-4-9b$', model_dir) else False, 
-    'mex_new_tokens': 512
+    'max_new_tokens': 256
     # 'n': 5
     }
 
@@ -45,10 +46,14 @@ if __name__ == '__main__':
 
     elif generation_config.get('include_input', False):
         # 命令行续写
+        history = ''
         while True:
-            query = input('\n输入:')
-            response = demo.generate(query)
-            print(f'续写: {response}')
+            query = input('\n\n输入:')
+            history += '\n\n输入:' + query + '\n\n续写: '
+            for o in demo.stream_generate(query):
+                os.system('clear')
+                print(f'{history}{o}', end='', flush=True)
+            history += o
 
     else:
         # 聊天

@@ -36,7 +36,7 @@ cnn_dim = 200
 logit_drop = 0
 cnn_depth = 3
 
-# BERT base
+# 模型路径
 config_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/bert4torch_config.json'
 checkpoint_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/pytorch_model.bin'
 dict_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/vocab.txt'

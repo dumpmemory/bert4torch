@@ -8,30 +8,13 @@ class Qwen2(Decoder):
     2) 除了qkv有bias, 其余均没有bias
     3) 和InternLM基本一致, 唯一的差别是InternLM的multiHeadAttention.o有bias
     '''
-    def __init__(self, 
-        *args, 
-        pos_emb_type='rotary', 
-        bias=True,
-        **kwargs
-    ):
-        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': bias, 'norm_mode': 'rmsnorm', 
-                       'final_layernorm': True, 'pre_layernorm': True,
-                       'mlp_type': 'LlamaFeedForward'})
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         del self.embeddings.layerNorm
 
         # 修改网络结构
         for layer in self.decoderLayer:
-            safe_register_parameter([
-                layer.feedForward.intermediateDense,
-                layer.feedForward.outputDense,
-                layer.feedForward.intermediateDense2,
-                layer.attnLayerNorm,
-                layer.ffnLayerNorm,
-                layer.multiHeadAttention.o],
-                'bias', None
-            )
-        safe_register_parameter(self.LayerNormFinal, 'bias', None)
+            safe_register_parameter([layer.multiHeadAttention.o], 'bias', None)
 
     def variable_mapping(self):
         # 映射到权重格式

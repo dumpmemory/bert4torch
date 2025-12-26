@@ -391,16 +391,14 @@ class AutoRegressiveDecoder(object):
                 output_scores_new.append(output_score)
                 flag_new.append(flag)
 
-            if len(inputs_new) > 0:  # 检查是否有未完成的序列
-                inputs = [torch.cat(i) for i in zip(*inputs_new)]
-                output_ids = torch.cat(output_ids_new)
-                output_scores = torch.cat(output_scores_new)
-                self.top_k = topks_new
-                self.flag = torch.cat(flag_new)
-            else:
-                # 所有序列都已完成
+            inputs = [torch.cat(i) for i in zip(*inputs_new)]
+            output_ids = torch.cat(output_ids_new)
+            output_scores = torch.cat(output_scores_new)
+            self.top_k = topks_new
+            self.flag = torch.cat(flag_new)
+
+            if len(output_ids) == 0:
                 break_tag = True
-                output_ids = torch.empty(0, output_ids.shape[1], dtype=output_ids.dtype, device=output_ids.device)
         else:
             # 不满足结束条件, 需要对self.flag进行更新
             self.flag = torch.ones_like(self.flag, dtype=torch.bool)

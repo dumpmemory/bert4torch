@@ -22,7 +22,7 @@ categories = ['O', 'B-LOC', 'I-LOC', 'B-PER', 'I-PER', 'B-ORG', 'I-ORG']
 categories_id2label = {i: k for i, k in enumerate(categories)}
 categories_label2id = {k: i for i, k in enumerate(categories)}
 
-# BERT base
+# 模型路径
 config_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/bert4torch_config.json'
 checkpoint_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/pytorch_model.bin'
 dict_path = 'E:/data/pretrain_ckpt/google-bert/bert-base-chinese/vocab.txt'

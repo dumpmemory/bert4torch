@@ -12,16 +12,14 @@ except:
 class ModernBert(BertBase):
     @delete_arguments('with_pool', 'with_nsp')
     def __init__(self, *args, **kwargs):
-        kwargs.update({'mlp_type': 'LlamaFeedForward', 'bias':False, 'pos_emb_type': 'rotary',
-                       'attn_type': 'ModernBertAttention', 'norm_mode': 'torch_buildin', 
-                       'pre_layernorm':True})
         super(ModernBert, self).__init__(*args, **kwargs)
         self.local_attention = kwargs['local_attention']
-        self.LayerNormFinal = LayerNorm(self.hidden_size, eps=kwargs.get('layer_norm_eps', 1e-12), 
-                                        conditional_size=self.conditional_size, 
-                                        norm_mode=kwargs.get('norm_mode', 'torch_buildin'),
-                                        weight=kwargs.get('weight', True), 
-                                        bias=kwargs.get('bias', True))
+        self.LayerNormFinal = LayerNorm(
+            self.hidden_size, layer_norm_eps=kwargs.get('layer_norm_eps', 1e-12), 
+            conditional_size=self.conditional_size, 
+            layer_norm_mode=kwargs.get('norm_mode', 'torch_buildin'),
+            use_bias=kwargs.get('use_bias', True)
+            )
         self.encoderLayer[0].attnLayerNorm = BlockIdentity(return_args_index=set([0]))
         safe_register_parameter([self.mlmDense, self.mlmLayerNorm], 'bias', None)
 

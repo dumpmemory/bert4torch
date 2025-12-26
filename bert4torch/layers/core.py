@@ -12,8 +12,9 @@ from bert4torch.losses import AddAuxiliaryLoss
 
 
 class LayerNorm(nn.Module):
-    def __init__(self, hidden_size:int, eps:float=1e-12, conditional_size:Union[bool, int]=False, bias:bool=True, 
-                 norm_mode:Literal['normal', 'torch_buildin', 'rmsnorm']='normal', rmsnorm_fp32:Literal['llama-qwen', 'glm']='llama-qwen', **kwargs):
+    def __init__(self, hidden_size:int, layer_norm_eps:float=1e-12, conditional_size:Union[bool, int]=False,  
+                 layer_norm_mode:Literal['normal', 'torch_buildin', 'rmsnorm']='normal', 
+                 rmsnorm_fp32:Literal['llama-qwen', 'glm']='llama-qwen', **kwargs):
         """ layernorm层，自行实现是为了兼容conditianal layernorm，使得可以做条件文本生成、条件分类等任务
 
             :param hidden_size: int, layernorm的神经元个数
@@ -24,19 +25,23 @@ class LayerNorm(nn.Module):
             :param rmsnorm_fp32: str
         """
         super(LayerNorm, self).__init__()
-        assert norm_mode in {'normal', 'rmsnorm', 'torch_buildin'}, f'Args norm_mode:{norm_mode} not supported'
+        assert layer_norm_mode in {'normal', 'rmsnorm', 'torch_buildin'}, f'Args norm_mode:{layer_norm_mode} not supported'
         self.normalized_shape = (hidden_size,)
-        self.norm_mode = norm_mode
+        self.norm_mode = layer_norm_mode
         assert rmsnorm_fp32 in {'llama-qwen', 'glm'}
         self.rmsnorm_fp32 = rmsnorm_fp32
-        self.eps = eps
+        self.eps = layer_norm_eps
         self.conditional_size = conditional_size
 
         # RoFormerV2和GAU_alpha没有weight
         self.weight = nn.Parameter(torch.ones(hidden_size))
 
         # 兼容t5不包含bias项, 大模型的RMSnorm
-        self.bias = nn.Parameter(torch.zeros(hidden_size)) if bias else None
+        use_bias = kwargs.get('norm_bias', kwargs.get('use_bias', True))
+        if not use_bias or self.norm_mode == 'rmsnorm':
+            self.bias = None
+        else:
+            self.bias = nn.Parameter(torch.zeros(hidden_size))
         
         # 条件layernorm, 用于条件文本生成
         if conditional_size:
@@ -116,7 +121,7 @@ class BertEmbeddings(nn.Module):
         self.emb_scale = kwargs.get('emb_scale', 1)  # transform_xl, xlnet特有
 
         # LayerNorm
-        self.layerNorm = LayerNorm(embedding_size, eps=kwargs.get('layer_norm_eps', 1e-12), conditional_size=conditional_size, **kwargs)
+        self.layerNorm = LayerNorm(embedding_size, conditional_size=conditional_size, **kwargs)
         self.dropout = nn.Dropout(dropout_rate) if dropout_rate > 0 else lambda x: x
 
         # 如果embedding_size != hidden_size，则再有一个linear(适用于albert矩阵分解)
@@ -198,9 +203,29 @@ class BertEmbeddings(nn.Module):
         return embeddings
 
 
+class ErnieEmbeddings(BertEmbeddings):
+    def __init__(self, vocab_size, embedding_size, *args, **kwargs):
+        super().__init__(vocab_size, embedding_size, *args, **kwargs)
+        self.use_task_id = kwargs.get('use_task_id')
+
+        if self.use_task_id:
+            self.task_type_embeddings = nn.Embedding(kwargs.get('task_type_vocab_size'), embedding_size)
+    
+    def apply_embeddings(self, token_ids, segment_ids, position_ids, additional_embs, **kwargs):
+        embeddings = super().apply_embeddings(token_ids, segment_ids, position_ids, additional_embs, **kwargs)
+
+        task_type_ids = kwargs.get('task_type_ids')
+        if self.use_task_id:
+            if task_type_ids is None:
+                task_type_ids = torch.zeros(token_ids.shape, dtype=torch.long, device=embeddings.device)
+            task_type_embeddings = self.task_type_embeddings(task_type_ids)
+            embeddings += task_type_embeddings
+        return embeddings
+
+
 class PositionWiseFeedForward(nn.Module):
     def __init__(self, hidden_size:int, intermediate_size:int, dropout_rate:float=0.5, 
-                 hidden_act:str='gelu', is_dropout:bool=False, bias:bool=True, **kwargs):
+                 hidden_act:str='gelu', is_dropout:bool=False, **kwargs):
         # 原生的tf版本的bert在激活函数后，没有添加dropout层，但是在google AI的bert-pytorch开源项目中，多了一层dropout；
         # 并且在pytorch官方的TransformerEncoderLayer的实现中，也有一层dropout层，就像这样：
         #           self.linear2(self.dropout(self.activation(self.linear1(src))))；
@@ -209,7 +234,7 @@ class PositionWiseFeedForward(nn.Module):
         # 为了适配是否dropout，用is_dropout，dropout_rate两个参数控制；如果是实现原始的transformer，直接使用默认参数即可；
         # 如果是实现bert，则is_dropout为False，此时的dropout_rate参数并不会使用.
         super(PositionWiseFeedForward, self).__init__()
-
+        bias = kwargs.get('mlp_bias', kwargs.get('use_bias', True))
         self.is_dropout = is_dropout
         self.intermediate_act_fn = get_activation(hidden_act)
         self.intermediateDense = nn.Linear(hidden_size, intermediate_size*2 if hidden_act=='swiglu' else intermediate_size, bias=bias)
@@ -232,8 +257,9 @@ class PositionWiseFeedForward(nn.Module):
 
 class LlamaFeedForward(nn.Module):
     '''FeedForward和Bert的不一致，Bert只有两个全连接, LLaMA和Qwen使用'''
-    def __init__(self, dim: int, intermediate_size: int, hidden_act='silu', bias=False, **kwargs):
+    def __init__(self, dim: int, intermediate_size: int, hidden_act='silu', **kwargs):
         super().__init__()
+        bias = kwargs.get('mlp_bias', kwargs.get('use_bias', False))
         self.intermediateDense = nn.Linear(dim, intermediate_size, bias=bias)
         self.outputDense = nn.Linear(intermediate_size, dim, bias=bias)
         self.intermediateDense2 = nn.Linear(dim, intermediate_size, bias=bias)
@@ -247,9 +273,10 @@ class T5PositionWiseFeedForward(PositionWiseFeedForward):
     '''参考transformer包: https://github.com/huggingface/transformers/blob/main/src/transformers/models/t5/modeling_t5.py'''
     def __init__(self, hidden_size, intermediate_size, **kwargs):
         super().__init__(hidden_size, intermediate_size, **kwargs)
-        self.intermediateDense = nn.Linear(hidden_size, intermediate_size, bias=False)
-        self.intermediateDense1 = nn.Linear(hidden_size, intermediate_size, bias=False)
-        self.outputDense = nn.Linear(intermediate_size, hidden_size, bias=False)
+        bias = kwargs.get('mlp_bias', kwargs.get('use_bias', False))
+        self.intermediateDense = nn.Linear(hidden_size, intermediate_size, bias=bias)
+        self.intermediateDense1 = nn.Linear(hidden_size, intermediate_size, bias=bias)
+        self.outputDense = nn.Linear(intermediate_size, hidden_size, bias=bias)
 
     def forward(self, x):
         # x shape: (batch size, seq len, hidden_size)

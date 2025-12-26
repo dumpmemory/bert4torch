@@ -4,9 +4,7 @@ from bert4torch.models.base import Decoder
 class Ernied4_5(Decoder):
     '''百度Ernied4_5大模型
     '''
-    def __init__(self, *args, pos_emb_type='rotary', **kwargs):
-        kwargs.update({'pos_emb_type': pos_emb_type, 'bias': False, 'norm_mode': 'rmsnorm', 
-                       'final_layernorm': True, 'pre_layernorm': True, 'mlp_type': 'LlamaFeedForward'})
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         del self.embeddings.layerNorm
 
