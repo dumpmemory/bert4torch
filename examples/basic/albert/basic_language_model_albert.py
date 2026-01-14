@@ -6,6 +6,8 @@ from bert4torch.tokenizers import Tokenizer
 import torch
 
 root_model_path = "E:/data/pretrain_ckpt/voidful/albert_chinese_base"
+inputtext = "天气不[MASK]，想出去玩玩"
+
 
 # ==========================bert4torch调用==========================
 # 加载模型，请更换成自己的路径
@@ -17,7 +19,7 @@ checkpoint_path = root_model_path + '/pytorch_model.bin'
 tokenizer = Tokenizer(vocab_path, do_lower_case=True)
 model = build_transformer_model(config_path, checkpoint_path, with_mlm='softmax')
 
-token_ids, segments_ids = tokenizer.encode("今天[MASK]情很好")
+token_ids, segments_ids = tokenizer.encode(inputtext)
 print(''.join(tokenizer.ids_to_tokens(token_ids)))
 
 tokens_ids_tensor = torch.tensor([token_ids])
@@ -39,7 +41,6 @@ from torch.nn.functional import softmax
 tokenizer = AutoTokenizer.from_pretrained(root_model_path)
 model = AlbertForMaskedLM.from_pretrained(root_model_path)
 
-inputtext = "今天[MASK]情很好"
 
 maskpos = tokenizer.encode(inputtext, add_special_tokens=True).index(103)
 

@@ -22,7 +22,7 @@ from bert4torch.pipelines import Chat
 # DeepSeek-R1-Distill-Llama-8B
 # DeepSeek-R1-Distill-Qwen-14B
 # DeepSeek-R1-0528-Qwen3-8B
-model_dir = 'E:/data/pretrain_ckpt/deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B'
+model_dir = 'E:/data/pretrain_ckpt/deepseek-ai/deepseek-moe-16b-chat'
 generation_config = {
     'max_length': 512,
 }

@@ -15,23 +15,6 @@ checkpoint_path = root_model_path + '/pytorch_model.bin'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 inputtext = "今天[MASK]情很好"
 
-# ==========================transformer调用==========================
-from transformers import AutoTokenizer, AutoModel, BertForMaskedLM
-from torch.nn.functional import softmax
-
-tokenizer = AutoTokenizer.from_pretrained(root_model_path)
-model = BertForMaskedLM.from_pretrained(root_model_path)
-
-encoded_input = tokenizer(inputtext, return_tensors='pt')
-maskpos = encoded_input['input_ids'][0].tolist().index(103)
-outputs = model(**encoded_input)
-
-prediction_scores = outputs['logits']
-logit_prob = softmax(prediction_scores[0, maskpos],dim=-1).data.tolist()
-predicted_index = torch.argmax(prediction_scores[0, maskpos]).item()
-predicted_token = tokenizer.convert_ids_to_tokens([predicted_index])[0]
-print('====transformers output====')
-print(predicted_token, logit_prob[predicted_index])
 
 # ==========================bert4torch调用=========================
 # 建立分词器
@@ -52,3 +35,21 @@ with torch.no_grad():
     print('====bert4torch output====')
     print(tokenizer.decode(pred_token), probas[0, maskpos, pred_token[0]].cpu().numpy())
 
+
+# ==========================transformer调用==========================
+from transformers import AutoTokenizer, AutoModel, BertForMaskedLM
+from torch.nn.functional import softmax
+
+tokenizer = AutoTokenizer.from_pretrained(root_model_path)
+model = BertForMaskedLM.from_pretrained(root_model_path)
+
+encoded_input = tokenizer(inputtext, return_tensors='pt')
+maskpos = encoded_input['input_ids'][0].tolist().index(103)
+outputs = model(**encoded_input)
+
+prediction_scores = outputs['logits']
+logit_prob = softmax(prediction_scores[0, maskpos],dim=-1).data.tolist()
+predicted_index = torch.argmax(prediction_scores[0, maskpos]).item()
+predicted_token = tokenizer.convert_ids_to_tokens([predicted_index])[0]
+print('====transformers output====')
+print(predicted_token, logit_prob[predicted_index])

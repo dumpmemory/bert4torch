@@ -6,15 +6,6 @@
 ckpt_dir = "E:/data/pretrain_ckpt/fnlp/bart-base-chinese/"  # v2.0
 texts = ["北京是[MASK]的首都", "今天的天气是[MASK]，可以正常出海"]
 
-# ==============================transformers=====================================
-from transformers import BertTokenizer, BartForConditionalGeneration
-tokenizer = BertTokenizer.from_pretrained(f"{ckpt_dir}")
-model = BartForConditionalGeneration.from_pretrained(f"{ckpt_dir}")
-input_ids = tokenizer.encode(texts[0], return_tensors='pt')
-pred_ids = model.generate(input_ids, num_beams=4, max_length=20)
-print('transformers output: ', tokenizer.convert_ids_to_tokens(pred_ids[0]))
-# 输出： ['[SEP]', '[CLS]', '北', '京', '是', '中', '国', '的', '首', '都', '[SEP]'] 
-
 
 # ==============================bert4torch=====================================
 from bert4torch.models import build_transformer_model
@@ -87,3 +78,13 @@ text = texts[0]
 for output in autotitle.stream_generate(text, top_k=top_k):
     os.system('clear')
     print(text, ' -> ', output, flush=True)
+
+
+# ==============================transformers=====================================
+from transformers import BertTokenizer, BartForConditionalGeneration
+tokenizer = BertTokenizer.from_pretrained(f"{ckpt_dir}")
+model = BartForConditionalGeneration.from_pretrained(f"{ckpt_dir}")
+input_ids = tokenizer.encode(texts[0], return_tensors='pt')
+pred_ids = model.generate(input_ids, num_beams=4, max_length=20)
+print('transformers output: ', tokenizer.convert_ids_to_tokens(pred_ids[0]))
+# 输出： ['[SEP]', '[CLS]', '北', '京', '是', '中', '国', '的', '首', '都', '[SEP]'] 

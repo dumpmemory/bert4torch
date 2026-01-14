@@ -5,6 +5,12 @@ sentences = [
     '* Massive 此文本嵌入模型通过**千万级**的中文句对数据集进行训练'
 ]
 
+print('=========================================bert4torch====================================')
+from bert4torch.pipelines import Text2Vec
+text2vec = Text2Vec(root_model_path)
+embeddings = text2vec.encode(sentences)
+print(embeddings)
+
 print('=========================================sentence transformer====================================')
 from sentence_transformers import SentenceTransformer
 model = SentenceTransformer(root_model_path)
@@ -13,9 +19,3 @@ embeddings = model.encode(sentences)
 #Print the embeddings
 print(embeddings)
 
-
-print('=========================================bert4torch====================================')
-from bert4torch.pipelines import Text2Vec
-text2vec = Text2Vec(root_model_path)
-embeddings = text2vec.encode(sentences)
-print(embeddings)

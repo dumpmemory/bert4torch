@@ -2,6 +2,13 @@
 
 |更新日期| bert4torch版本 | torch4keras版本 | 版本说明 |
 |------| ---------------- | ----------------- |----------- |
+| 20260114 | 0.6.1       | 0.3.3       | 增加 `Qwen3-moe`, 支持 `gptq`、`awq`等主流量化方式，其他代码优化                                                                      |
+| 20250925 | 0.6.0       | 0.3.2       | 增加 `Qwen3-moe`, 支持 `gptq`、`awq`等主流量化方式，其他代码优化                                                                      |
+| 20250721 | 0.5.9.post2 | 0.3.1       | 增加 `Ernie4_5`, 修复hub下载bug, 拆分出 `openai_client`                                                                                 |
+| 20250621 | 0.5.8       | 0.3.0       | 增加 `Qwen3-Embedding`和 `Qwen3-Reranker`, 支持 `temperature`设置为0, 修复 `sdpa`和 `global_point`的bug, 拆分 `attention_utils` |
+| 20250511 | 0.5.7       | 0.2.9.post2 | 命令行参数修改为 `bert4torch serve`, 增加 `Qwen3`                                                                                       |
+| 20250401 | 0.5.6       | 0.2.9       | 命令行支持图片输入, 修复rope在batch推理和超长时候的bug                                                                                      |
+| 20250215 | 0.5.5       | 0.2.8       | 增加 `deepseek-r1`, `internvl`, `internlm3`, `glm4v`, `modernbert`, `mllama`, `qwen2vl`, `qwenvl`                           |
 |20240928| 0.5.4          | 0.2.7 | 【新功能】增加deepseek系列、MiniCPM、MiniCPMV、llama3.2、Qwen2.5；支持device_map=auto;【修复】修复batch_generate和n>1的bug|
 |20240814| 0.5.3          | 0.2.6 | 【新功能】增加llama3.1/Yi1.5；自动选择从hfmirror下载；支持命令行参数`bert4torch serve`|
 |20240801| 0.5.2          | 0.2.5 | 【新功能】chatglm/qwen系列支持function call调用, 增加internlm2系列；【小优化】简化pipeline中chat demo的调用，generate的终止token元素允许为列表, 统一rope_scaling参数名，增加rope衍生类；【bug】修复flash_attn2的推理bug, 修复bart的tie_word_embedding的bug|
