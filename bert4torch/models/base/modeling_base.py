@@ -32,7 +32,6 @@ class BertBase(PreTrainedModel):
             embedding_size:int=None,  # 指定embedding_size, 不指定则使用config文件的参数
             keep_hidden_layers:List[int]=None, # 保留的hidden_layer层的id
             residual_attention_scores:bool=False,  # Attention矩阵加残差
-            hierarchical_position:Union[bool, float]=None,  # 是否层次分解位置编码
             gradient_checkpoint:bool=False, # 是否使用gradient_checkpoint
             output_all_encoded_layers:bool=False, # 是否返回所有layer的hidden_states
             return_dict:bool=False,  # 是否返回的格式是dict
@@ -71,7 +70,6 @@ class BertBase(PreTrainedModel):
         self.embedding_size = embedding_size or hidden_size
         self.keep_hidden_layers = set(range(num_hidden_layers)) if keep_hidden_layers is None else set(keep_hidden_layers)
         self.residual_attention_scores = residual_attention_scores
-        self.hierarchical_position = hierarchical_position
         self.gradient_checkpoint = gradient_checkpoint
         self.attention_scores = None
         self.output_all_encoded_layers = output_all_encoded_layers
@@ -121,7 +119,7 @@ class BertBase(PreTrainedModel):
     @property
     def _embedding_args(self):
         args = ['vocab_size', 'embedding_size', 'hidden_size', 'max_position', 'segment_vocab_size', 
-                'shared_segment_embeddings', 'dropout_rate', 'conditional_size']
+                'shared_segment_embeddings', 'dropout_rate', 'conditional_size', 'hierarchical_position']
         return args
 
     @property

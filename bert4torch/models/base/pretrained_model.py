@@ -84,7 +84,8 @@ class PreTrainedModel(nn.Module):
     def get_kw(self, *args, **kwargs):
         '''把self.属性设置到kwargs中, 方便传参'''
         for arg in args:
-            kwargs[arg] = getattr(self, arg)
+            if hasattr(self, arg):
+                kwargs[arg] = getattr(self, arg)
         return kwargs
 
     def args_segmentate(self, inputs, **model_kwargs):
